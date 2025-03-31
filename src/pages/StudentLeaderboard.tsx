@@ -25,7 +25,7 @@ const mockLeaderboardData = [
   { rank: 6, name: 'David Kim', points: 890, streak: 19, badges: ['Fast Learner'] },
   { rank: 7, name: 'Jessica Wang', points: 845, streak: 26, badges: ['Dedicated Learner'] },
   { rank: 8, name: 'John Smith', points: 820, streak: 15, badges: ['Course Completer'] },
-  { rank: 9, name: 'Maya Patel', points: 780, streak: 23, badges: ['Problem Solver'] },
+  { rank: 9, name: 'MAITREYA CHANNE', points: 780, streak: 23, badges: ['Problem Solver'] },
   { rank: 10, name: 'SHALAK SONAWANE', points: 750, streak: 18, badges: ['Quick Learner'] },
 ];
 
