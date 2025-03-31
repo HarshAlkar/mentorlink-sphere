@@ -1,187 +1,127 @@
 
 import React from 'react';
-import { Navigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
 import Navigation from '@/components/Navigation';
 import Footer from '@/components/Footer';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { BookOpen, Calendar, Users, Award, Clock, FileText } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useAuth } from '@/contexts/AuthContext';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import SessionsOverview from '@/components/SessionsOverview';
 
 const Dashboard = () => {
   const { user, isAuthenticated } = useAuth();
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" />;
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Navigation />
+        <main className="flex-grow">
+          <div className="container py-8 px-4 md:px-6">
+            <Card>
+              <CardContent className="py-12">
+                <div className="text-center">
+                  <h2 className="text-2xl font-bold mb-4">Login Required</h2>
+                  <p className="text-muted-foreground">
+                    Please log in to access your dashboard.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
   }
 
   return (
     <div className="min-h-screen flex flex-col">
       <Navigation />
-      <main className="flex-grow py-10 px-4 bg-gray-50">
-        <div className="container">
-          <header className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-            <p className="text-gray-600 mt-2">Welcome back, {user?.username}!</p>
-          </header>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <BookOpen className="text-mentor" size={20} />
-                  Courses
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-3xl font-bold">12</p>
-                <p className="text-sm text-gray-500">Active courses</p>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Calendar className="text-mentee" size={20} />
-                  Sessions
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-3xl font-bold">5</p>
-                <p className="text-sm text-gray-500">Upcoming sessions</p>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Users className="text-mentor" size={20} />
-                  Connections
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-3xl font-bold">8</p>
-                <p className="text-sm text-gray-500">Active connections</p>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Award className="text-mentee" size={20} />
-                  Achievements
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-3xl font-bold">3</p>
-                <p className="text-sm text-gray-500">Certificates earned</p>
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2">
-              <Card className="h-full">
-                <CardHeader>
-                  <CardTitle>Your Progress</CardTitle>
-                  <CardDescription>Track your current learning progress</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-6">
-                    <div>
-                      <div className="flex justify-between mb-2">
-                        <span className="text-sm font-medium">Web Development Fundamentals</span>
-                        <span className="text-sm text-gray-500">75%</span>
-                      </div>
-                      <div className="h-2 bg-gray-200 rounded-full">
-                        <div className="h-2 bg-mentor rounded-full" style={{ width: '75%' }}></div>
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <div className="flex justify-between mb-2">
-                        <span className="text-sm font-medium">Data Science Basics</span>
-                        <span className="text-sm text-gray-500">45%</span>
-                      </div>
-                      <div className="h-2 bg-gray-200 rounded-full">
-                        <div className="h-2 bg-mentee rounded-full" style={{ width: '45%' }}></div>
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <div className="flex justify-between mb-2">
-                        <span className="text-sm font-medium">Machine Learning Concepts</span>
-                        <span className="text-sm text-gray-500">30%</span>
-                      </div>
-                      <div className="h-2 bg-gray-200 rounded-full">
-                        <div className="h-2 bg-gradient-to-r from-mentor to-mentee rounded-full" style={{ width: '30%' }}></div>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="mt-6">
-                    <Button variant="outline" className="w-full">View All Courses</Button>
-                  </div>
-                </CardContent>
-              </Card>
+      <main className="flex-grow bg-gray-50">
+        <div className="container py-8 px-4 md:px-6">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">
+                Welcome, {user?.username}!
+              </h1>
+              <p className="text-muted-foreground mt-1">
+                Here's an overview of your learning journey.
+              </p>
             </div>
-            
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <Card>
-              <CardHeader>
-                <CardTitle>Upcoming Sessions</CardTitle>
-                <CardDescription>Your scheduled mentoring sessions</CardDescription>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg">Completed Sessions</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  <div className="border rounded-lg p-3">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <h4 className="font-semibold">Career Guidance</h4>
-                        <p className="text-sm text-gray-500">with John Smith</p>
-                      </div>
-                      <Button variant="outline" size="sm">Join</Button>
-                    </div>
-                    <div className="flex items-center mt-2 text-sm text-gray-600">
-                      <Calendar size={16} className="mr-1" />
-                      <span>Today, 3:00 PM</span>
-                    </div>
-                  </div>
-                  
-                  <div className="border rounded-lg p-3">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <h4 className="font-semibold">Project Review</h4>
-                        <p className="text-sm text-gray-500">with Sarah Johnson</p>
-                      </div>
-                      <Button variant="outline" size="sm">Join</Button>
-                    </div>
-                    <div className="flex items-center mt-2 text-sm text-gray-600">
-                      <Calendar size={16} className="mr-1" />
-                      <span>Tomorrow, 1:30 PM</span>
-                    </div>
-                  </div>
-                  
-                  <div className="border rounded-lg p-3">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <h4 className="font-semibold">Learning Path Discussion</h4>
-                        <p className="text-sm text-gray-500">with Alex Cooper</p>
-                      </div>
-                      <Button variant="outline" size="sm">Join</Button>
-                    </div>
-                    <div className="flex items-center mt-2 text-sm text-gray-600">
-                      <Calendar size={16} className="mr-1" />
-                      <span>Wed, 10:00 AM</span>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="mt-4">
-                  <Button variant="outline" className="w-full">Schedule Session</Button>
-                </div>
+                <div className="text-3xl font-bold">3</div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg">Courses In Progress</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold">2</div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg">Upcoming Sessions</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold">2</div>
               </CardContent>
             </Card>
           </div>
+
+          <Tabs defaultValue="sessions">
+            <TabsList className="mb-6">
+              <TabsTrigger value="sessions">Upcoming Sessions</TabsTrigger>
+              <TabsTrigger value="courses">My Courses</TabsTrigger>
+              <TabsTrigger value="mentors">My Mentors</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="sessions">
+              <div className="mb-6">
+                <h2 className="text-xl font-semibold mb-4">Scheduled Sessions</h2>
+                <SessionsOverview />
+              </div>
+            </TabsContent>
+
+            <TabsContent value="courses">
+              <div className="mb-6">
+                <h2 className="text-xl font-semibold mb-4">My Courses</h2>
+                <Card>
+                  <CardContent className="py-6">
+                    <div className="text-center">
+                      <p className="text-muted-foreground">
+                        You haven't enrolled in any courses yet.
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="mentors">
+              <div className="mb-6">
+                <h2 className="text-xl font-semibold mb-4">My Mentors</h2>
+                <Card>
+                  <CardContent className="py-6">
+                    <div className="text-center">
+                      <p className="text-muted-foreground">
+                        You don't have any mentors yet.
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+          </Tabs>
         </div>
       </main>
       <Footer />
