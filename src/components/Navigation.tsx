@@ -1,17 +1,32 @@
 
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Calendar, BookOpen, Users, Home, Menu, X } from 'lucide-react';
+import { Calendar, BookOpen, Users, Home, Menu, X, User, LogOut } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useAuth } from '@/contexts/AuthContext';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const Navigation = () => {
   const isMobile = useIsMobile();
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
+  const { user, isAuthenticated, logout } = useAuth();
+  const navigate = useNavigate();
 
   const toggleMobileMenu = () => {
     setMobileMenuOpen(!mobileMenuOpen);
+  };
+
+  const handleLogout = () => {
+    logout();
+    navigate('/');
   };
 
   return (
@@ -58,18 +73,54 @@ const Navigation = () => {
         )}
 
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="sm" asChild>
-            <Link to="/login">Sign In</Link>
-          </Button>
-          <Button size="sm" className="bg-gradient-to-r from-mentor to-mentee hover:from-mentor-dark hover:to-mentee-dark" asChild>
-            <Link to="/register">Sign Up</Link>
-          </Button>
-          <div className="hidden md:block">
-            <Avatar>
-              <AvatarImage src="/placeholder.svg" alt="User" />
-              <AvatarFallback>U</AvatarFallback>
-            </Avatar>
-          </div>
+          {isAuthenticated ? (
+            <>
+              {!isMobile && <Link to="/dashboard" className="text-sm font-medium hover:text-primary">Dashboard</Link>}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Avatar className="cursor-pointer">
+                    <AvatarImage src="/placeholder.svg" alt={user?.username} />
+                    <AvatarFallback>{user?.username.charAt(0).toUpperCase()}</AvatarFallback>
+                  </Avatar>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <div className="flex items-center justify-start gap-2 p-2">
+                    <div className="flex flex-col space-y-1 leading-none">
+                      <p className="font-medium">{user?.username}</p>
+                      <p className="w-[200px] truncate text-sm text-muted-foreground">{user?.email}</p>
+                    </div>
+                  </div>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link to="/dashboard" className="cursor-pointer flex w-full items-center">
+                      <Home className="mr-2 h-4 w-4" />
+                      <span>Dashboard</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/profile" className="cursor-pointer flex w-full items-center">
+                      <User className="mr-2 h-4 w-4" />
+                      <span>Profile</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem className="cursor-pointer" onClick={handleLogout}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Log out</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </>
+          ) : (
+            <>
+              <Button variant="ghost" size="sm" asChild>
+                <Link to="/login">Sign In</Link>
+              </Button>
+              <Button size="sm" className="bg-gradient-to-r from-mentor to-mentee hover:from-mentor-dark hover:to-mentee-dark" asChild>
+                <Link to="/register">Sign Up</Link>
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
@@ -108,6 +159,54 @@ const Navigation = () => {
               <Calendar size={18} />
               <span>Schedule</span>
             </Link>
+            
+            {isAuthenticated ? (
+              <>
+                <Link 
+                  to="/dashboard" 
+                  className="px-6 py-3 text-sm font-medium hover:bg-muted flex items-center gap-2"
+                  onClick={toggleMobileMenu}
+                >
+                  <Home size={18} />
+                  <span>Dashboard</span>
+                </Link>
+                <Link 
+                  to="/profile" 
+                  className="px-6 py-3 text-sm font-medium hover:bg-muted flex items-center gap-2"
+                  onClick={toggleMobileMenu}
+                >
+                  <User size={18} />
+                  <span>Profile</span>
+                </Link>
+                <button 
+                  className="px-6 py-3 text-sm font-medium hover:bg-muted flex items-center gap-2 w-full text-left text-destructive"
+                  onClick={() => {
+                    handleLogout();
+                    toggleMobileMenu();
+                  }}
+                >
+                  <LogOut size={18} />
+                  <span>Log out</span>
+                </button>
+              </>
+            ) : (
+              <>
+                <Link 
+                  to="/login" 
+                  className="px-6 py-3 text-sm font-medium hover:bg-muted flex items-center gap-2"
+                  onClick={toggleMobileMenu}
+                >
+                  <span>Sign In</span>
+                </Link>
+                <Link 
+                  to="/register" 
+                  className="px-6 py-3 text-sm font-medium bg-primary text-white hover:bg-primary/90 flex items-center gap-2 mx-6 justify-center rounded-md"
+                  onClick={toggleMobileMenu}
+                >
+                  <span>Sign Up</span>
+                </Link>
+              </>
+            )}
           </nav>
         </div>
       )}
