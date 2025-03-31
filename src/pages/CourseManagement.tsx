@@ -16,7 +16,9 @@ import {
   Users, 
   FileText, 
   Video, 
-  Upload 
+  Upload,
+  FileQuestion,
+  CheckSquare
 } from 'lucide-react';
 import { 
   Dialog, 
@@ -32,8 +34,21 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
 
+// Define types for our data
+type CourseStatus = 'draft' | 'published';
+
+interface Course {
+  id: string;
+  title: string;
+  description: string;
+  students: number;
+  lastUpdated: string;
+  status: CourseStatus;
+  instructor: string;
+}
+
 // Mock courses data
-const mockCourses = [
+const mockCourses: Course[] = [
   {
     id: '1',
     title: 'Introduction to Web Development',
@@ -63,25 +78,96 @@ const mockCourses = [
   },
 ];
 
+// Define mock materials
+interface Material {
+  id: string;
+  name: string;
+  type: 'document' | 'video' | 'quiz' | 'assignment';
+  courseId: string;
+  uploadDate: string;
+  size?: string;
+  duration?: string;
+  questionCount?: number;
+  dueDate?: string;
+}
+
+const mockMaterials: Material[] = [
+  {
+    id: '1',
+    name: 'Introduction_to_Web_Dev.pdf',
+    type: 'document',
+    courseId: '1',
+    uploadDate: '2023-09-15',
+    size: '3.2 MB',
+  },
+  {
+    id: '2',
+    name: 'CSS_Grid_Tutorial.mp4',
+    type: 'video',
+    courseId: '1',
+    uploadDate: '2023-09-12',
+    size: '42 MB',
+    duration: '32:15',
+  },
+  {
+    id: '3',
+    name: 'HTML Basics Quiz',
+    type: 'quiz',
+    courseId: '1',
+    uploadDate: '2023-09-18',
+    questionCount: 15,
+  },
+  {
+    id: '4',
+    name: 'Create a Landing Page',
+    type: 'assignment',
+    courseId: '1',
+    uploadDate: '2023-09-20',
+    dueDate: '2023-10-05',
+  },
+];
+
 const courseFormSchema = z.object({
   title: z.string().min(5, "Title must be at least 5 characters"),
   description: z.string().min(20, "Description must be at least 20 characters"),
   status: z.enum(['draft', 'published']),
 });
 
+const materialFormSchema = z.object({
+  name: z.string().min(3, "Name must be at least 3 characters"),
+  type: z.enum(['document', 'video', 'quiz', 'assignment']),
+  courseId: z.string().min(1, "Course must be selected"),
+  description: z.string().optional(),
+  dueDate: z.string().optional(),
+  questionCount: z.number().optional(),
+});
+
 const CourseManagement = () => {
   const { user, isAuthenticated } = useAuth();
   const { toast } = useToast();
-  const [courses, setCourses] = useState(mockCourses);
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [courses, setCourses] = useState<Course[]>(mockCourses);
+  const [materials, setMaterials] = useState<Material[]>(mockMaterials);
+  const [courseDialogOpen, setCourseDialogOpen] = useState(false);
+  const [materialDialogOpen, setMaterialDialogOpen] = useState(false);
+  const [selectedMaterialType, setSelectedMaterialType] = useState<'document' | 'video' | 'quiz' | 'assignment'>('document');
   const [editingCourseId, setEditingCourseId] = useState<string | null>(null);
   
-  const form = useForm<z.infer<typeof courseFormSchema>>({
+  const courseForm = useForm<z.infer<typeof courseFormSchema>>({
     resolver: zodResolver(courseFormSchema),
     defaultValues: {
       title: '',
       description: '',
       status: 'draft',
+    },
+  });
+  
+  const materialForm = useForm<z.infer<typeof materialFormSchema>>({
+    resolver: zodResolver(materialFormSchema),
+    defaultValues: {
+      name: '',
+      type: 'document',
+      courseId: courses[0]?.id || '',
+      description: '',
     },
   });
   
@@ -112,42 +198,61 @@ const CourseManagement = () => {
 
   const handleAddCourse = () => {
     setEditingCourseId(null);
-    form.reset({
+    courseForm.reset({
       title: '',
       description: '',
       status: 'draft',
     });
-    setDialogOpen(true);
+    setCourseDialogOpen(true);
   };
 
   const handleEditCourse = (courseId: string) => {
     const course = courses.find(c => c.id === courseId);
     if (course) {
       setEditingCourseId(courseId);
-      form.reset({
+      courseForm.reset({
         title: course.title,
         description: course.description,
-        status: course.status as 'draft' | 'published',
+        status: course.status,
       });
-      setDialogOpen(true);
+      setCourseDialogOpen(true);
     }
   };
 
   const handleDeleteCourse = (courseId: string) => {
     setCourses(courses.filter(course => course.id !== courseId));
+    // Also delete associated materials
+    setMaterials(materials.filter(material => material.courseId !== courseId));
     toast({
       title: "Course deleted",
       description: "The course has been deleted successfully",
     });
   };
 
-  const onSubmit = (values: z.infer<typeof courseFormSchema>) => {
+  const handleAddMaterial = (type: 'document' | 'video' | 'quiz' | 'assignment') => {
+    setSelectedMaterialType(type);
+    materialForm.reset({
+      name: '',
+      type: type,
+      courseId: courses[0]?.id || '',
+      description: '',
+    });
+    setMaterialDialogOpen(true);
+  };
+
+  const onSubmitCourse = (values: z.infer<typeof courseFormSchema>) => {
     if (editingCourseId) {
       // Update existing course
       setCourses(
         courses.map(course => 
           course.id === editingCourseId 
-            ? { ...course, ...values, lastUpdated: new Date().toISOString().split('T')[0] } 
+            ? { 
+                ...course, 
+                title: values.title,
+                description: values.description,
+                status: values.status,
+                lastUpdated: new Date().toISOString().split('T')[0] 
+              } 
             : course
         )
       );
@@ -157,9 +262,11 @@ const CourseManagement = () => {
       });
     } else {
       // Add new course
-      const newCourse = {
+      const newCourse: Course = {
         id: `${Date.now()}`,
-        ...values,
+        title: values.title,
+        description: values.description,
+        status: values.status,
         students: 0,
         lastUpdated: new Date().toISOString().split('T')[0],
         instructor: user?.username || 'Unknown',
@@ -170,7 +277,43 @@ const CourseManagement = () => {
         description: "The course has been created successfully",
       });
     }
-    setDialogOpen(false);
+    setCourseDialogOpen(false);
+  };
+
+  const onSubmitMaterial = (values: z.infer<typeof materialFormSchema>) => {
+    // Create new material based on type
+    const newMaterial: Material = {
+      id: `material-${Date.now()}`,
+      name: values.name,
+      type: values.type,
+      courseId: values.courseId,
+      uploadDate: new Date().toISOString().split('T')[0],
+    };
+
+    // Add type-specific properties
+    if (values.type === 'document' || values.type === 'video') {
+      newMaterial.size = '10 MB'; // Mocked size
+    }
+    
+    if (values.type === 'video') {
+      newMaterial.duration = '25:00'; // Mocked duration
+    }
+    
+    if (values.type === 'quiz') {
+      newMaterial.questionCount = values.questionCount || 10;
+    }
+    
+    if (values.type === 'assignment') {
+      newMaterial.dueDate = values.dueDate || 
+        new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]; // Two weeks from now
+    }
+
+    setMaterials([...materials, newMaterial]);
+    toast({
+      title: "Material added",
+      description: `The ${values.type} has been added successfully`,
+    });
+    setMaterialDialogOpen(false);
   };
 
   return (
@@ -351,8 +494,8 @@ const CourseManagement = () => {
                   <CardContent className="py-6">
                     <div className="mb-6">
                       <h3 className="text-lg font-medium mb-3">Upload Materials</h3>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <Card className="p-4 cursor-pointer hover:bg-muted/50">
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <Card className="p-4 cursor-pointer hover:bg-muted/50" onClick={() => handleAddMaterial('document')}>
                           <div className="flex flex-col items-center text-center">
                             <FileText className="h-10 w-10 text-primary mb-2" />
                             <h4 className="font-medium">Documents</h4>
@@ -360,7 +503,7 @@ const CourseManagement = () => {
                           </div>
                         </Card>
                         
-                        <Card className="p-4 cursor-pointer hover:bg-muted/50">
+                        <Card className="p-4 cursor-pointer hover:bg-muted/50" onClick={() => handleAddMaterial('video')}>
                           <div className="flex flex-col items-center text-center">
                             <Video className="h-10 w-10 text-primary mb-2" />
                             <h4 className="font-medium">Video Lessons</h4>
@@ -368,11 +511,19 @@ const CourseManagement = () => {
                           </div>
                         </Card>
                         
-                        <Card className="p-4 cursor-pointer hover:bg-muted/50">
+                        <Card className="p-4 cursor-pointer hover:bg-muted/50" onClick={() => handleAddMaterial('quiz')}>
                           <div className="flex flex-col items-center text-center">
-                            <BookOpen className="h-10 w-10 text-primary mb-2" />
-                            <h4 className="font-medium">Quizzes & Assessments</h4>
-                            <p className="text-xs text-muted-foreground mt-1">Create interactive assessments</p>
+                            <FileQuestion className="h-10 w-10 text-primary mb-2" />
+                            <h4 className="font-medium">Quizzes</h4>
+                            <p className="text-xs text-muted-foreground mt-1">Create interactive quizzes</p>
+                          </div>
+                        </Card>
+                        
+                        <Card className="p-4 cursor-pointer hover:bg-muted/50" onClick={() => handleAddMaterial('assignment')}>
+                          <div className="flex flex-col items-center text-center">
+                            <CheckSquare className="h-10 w-10 text-primary mb-2" />
+                            <h4 className="font-medium">Assignments</h4>
+                            <p className="text-xs text-muted-foreground mt-1">Create assignments with due dates</p>
                           </div>
                         </Card>
                       </div>
@@ -381,23 +532,25 @@ const CourseManagement = () => {
                     <div>
                       <h3 className="text-lg font-medium mb-3">Recent Uploads</h3>
                       <div className="space-y-2">
-                        <div className="flex items-center p-2 rounded-md hover:bg-muted">
-                          <FileText className="h-5 w-5 text-blue-500 mr-2" />
-                          <div className="flex-1">
-                            <p className="text-sm font-medium">Introduction_to_Web_Dev.pdf</p>
-                            <p className="text-xs text-muted-foreground">Uploaded 2 days ago • 3.2 MB</p>
+                        {materials.map((material) => (
+                          <div key={material.id} className="flex items-center p-2 rounded-md hover:bg-muted">
+                            {material.type === 'document' && <FileText className="h-5 w-5 text-blue-500 mr-2" />}
+                            {material.type === 'video' && <Video className="h-5 w-5 text-red-500 mr-2" />}
+                            {material.type === 'quiz' && <FileQuestion className="h-5 w-5 text-green-500 mr-2" />}
+                            {material.type === 'assignment' && <CheckSquare className="h-5 w-5 text-amber-500 mr-2" />}
+                            <div className="flex-1">
+                              <p className="text-sm font-medium">{material.name}</p>
+                              <p className="text-xs text-muted-foreground">
+                                Uploaded {material.uploadDate} 
+                                {material.size && ` • ${material.size}`}
+                                {material.duration && ` • Duration: ${material.duration}`}
+                                {material.questionCount && ` • ${material.questionCount} questions`}
+                                {material.dueDate && ` • Due: ${material.dueDate}`}
+                              </p>
+                            </div>
+                            <Button variant="ghost" size="sm"><Edit className="h-4 w-4" /></Button>
                           </div>
-                          <Button variant="ghost" size="sm"><Edit className="h-4 w-4" /></Button>
-                        </div>
-                        
-                        <div className="flex items-center p-2 rounded-md hover:bg-muted">
-                          <Video className="h-5 w-5 text-red-500 mr-2" />
-                          <div className="flex-1">
-                            <p className="text-sm font-medium">CSS_Grid_Tutorial.mp4</p>
-                            <p className="text-xs text-muted-foreground">Uploaded 3 days ago • 42 MB</p>
-                          </div>
-                          <Button variant="ghost" size="sm"><Edit className="h-4 w-4" /></Button>
-                        </div>
+                        ))}
                       </div>
                     </div>
                   </CardContent>
@@ -408,7 +561,8 @@ const CourseManagement = () => {
         </div>
       </main>
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      {/* Course Dialog */}
+      <Dialog open={courseDialogOpen} onOpenChange={setCourseDialogOpen}>
         <DialogContent className="sm:max-w-[525px]">
           <DialogHeader>
             <DialogTitle>
@@ -420,11 +574,11 @@ const CourseManagement = () => {
                 : "Add the details for the new course you want to create."}
             </DialogDescription>
           </DialogHeader>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)}>
+          <Form {...courseForm}>
+            <form onSubmit={courseForm.handleSubmit(onSubmitCourse)}>
               <div className="grid gap-4 py-4">
                 <FormField
-                  control={form.control}
+                  control={courseForm.control}
                   name="title"
                   render={({ field }) => (
                     <FormItem>
@@ -437,7 +591,7 @@ const CourseManagement = () => {
                   )}
                 />
                 <FormField
-                  control={form.control}
+                  control={courseForm.control}
                   name="description"
                   render={({ field }) => (
                     <FormItem>
@@ -454,7 +608,7 @@ const CourseManagement = () => {
                   )}
                 />
                 <FormField
-                  control={form.control}
+                  control={courseForm.control}
                   name="status"
                   render={({ field }) => (
                     <FormItem>
@@ -491,6 +645,152 @@ const CourseManagement = () => {
               <DialogFooter>
                 <Button type="submit">
                   {editingCourseId ? "Save Changes" : "Create Course"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Material Dialog */}
+      <Dialog open={materialDialogOpen} onOpenChange={setMaterialDialogOpen}>
+        <DialogContent className="sm:max-w-[525px]">
+          <DialogHeader>
+            <DialogTitle>
+              Add New {selectedMaterialType.charAt(0).toUpperCase() + selectedMaterialType.slice(1)}
+            </DialogTitle>
+            <DialogDescription>
+              Complete the details below to add this material to your course.
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...materialForm}>
+            <form onSubmit={materialForm.handleSubmit(onSubmitMaterial)}>
+              <div className="grid gap-4 py-4">
+                <FormField
+                  control={materialForm.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder={`e.g. JavaScript Basics ${selectedMaterialType === 'document' ? 'PDF' : selectedMaterialType === 'video' ? 'Video' : selectedMaterialType === 'quiz' ? 'Quiz' : 'Assignment'}`} {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={materialForm.control}
+                  name="courseId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Course</FormLabel>
+                      <FormControl>
+                        <select 
+                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                          {...field}
+                        >
+                          {courses.map(course => (
+                            <option key={course.id} value={course.id}>{course.title}</option>
+                          ))}
+                        </select>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={materialForm.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description (Optional)</FormLabel>
+                      <FormControl>
+                        <Textarea 
+                          placeholder={`Describe this ${selectedMaterialType}`}
+                          className="min-h-[80px]"
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                {selectedMaterialType === 'document' && (
+                  <div className="flex items-center justify-center w-full">
+                    <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
+                      <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                        <Upload className="w-8 h-8 mb-2 text-gray-500" />
+                        <p className="mb-2 text-sm text-gray-500"><span className="font-semibold">Click to upload</span> or drag and drop</p>
+                        <p className="text-xs text-gray-500">PDF, DOCX, PPTX (MAX. 10MB)</p>
+                      </div>
+                      <input id="dropzone-file" type="file" className="hidden" />
+                    </label>
+                  </div>
+                )}
+                
+                {selectedMaterialType === 'video' && (
+                  <div className="flex items-center justify-center w-full">
+                    <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
+                      <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                        <Upload className="w-8 h-8 mb-2 text-gray-500" />
+                        <p className="mb-2 text-sm text-gray-500"><span className="font-semibold">Click to upload</span> or drag and drop</p>
+                        <p className="text-xs text-gray-500">MP4, WEBM (MAX. 100MB)</p>
+                      </div>
+                      <input id="dropzone-file" type="file" className="hidden" />
+                    </label>
+                  </div>
+                )}
+                
+                {selectedMaterialType === 'quiz' && (
+                  <FormField
+                    control={materialForm.control}
+                    name="questionCount"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Number of Questions</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            min="1" 
+                            placeholder="e.g. 10" 
+                            {...field} 
+                            onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                            value={field.value || ''}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+                
+                {selectedMaterialType === 'assignment' && (
+                  <FormField
+                    control={materialForm.control}
+                    name="dueDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Due Date</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="date" 
+                            min={new Date().toISOString().split('T')[0]}
+                            {...field} 
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+              </div>
+              <DialogFooter>
+                <Button type="submit">
+                  Add {selectedMaterialType.charAt(0).toUpperCase() + selectedMaterialType.slice(1)}
                 </Button>
               </DialogFooter>
             </form>

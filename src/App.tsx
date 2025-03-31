@@ -23,6 +23,10 @@ import MentorAdminDashboard from "./pages/MentorAdminDashboard";
 import CourseManagement from "./pages/CourseManagement";
 import MentorManagement from "./pages/MentorManagement";
 import StudentLeaderboard from "./pages/StudentLeaderboard";
+import DocumentPage from "./pages/DocumentPage";
+import VideoSession from "./pages/VideoSession";
+import QuizPage from "./pages/QuizPage";
+import AssignmentPage from "./pages/AssignmentPage";
 
 const queryClient = new QueryClient();
 
@@ -45,14 +49,22 @@ const App = () => (
             <Route path="/mentors/:id/request" element={<MentorRequest />} />
             <Route path="/mentors/:id/session" element={<MentorSession />} />
             
-            {/* New role-specific routes */}
+            {/* Role-specific routes */}
             <Route path="/mentor/dashboard" element={<MentorDashboard />} />
             <Route path="/teacher/dashboard" element={<TeacherDashboard />} />
             <Route path="/student/dashboard" element={<StudentDashboard />} />
             <Route path="/student/leaderboard" element={<StudentLeaderboard />} />
             <Route path="/mentor-admin/dashboard" element={<MentorAdminDashboard />} />
+            
+            {/* Course and content management routes */}
             <Route path="/course-management" element={<CourseManagement />} />
             <Route path="/mentor-management" element={<MentorManagement />} />
+            
+            {/* New content type routes */}
+            <Route path="/document/:documentId" element={<DocumentPage />} />
+            <Route path="/video-session/:sessionId" element={<VideoSession />} />
+            <Route path="/quiz/:quizId" element={<QuizPage />} />
+            <Route path="/assignment/:assignmentId" element={<AssignmentPage />} />
             
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
