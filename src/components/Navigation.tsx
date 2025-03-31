@@ -3,7 +3,7 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Calendar, BookOpen, Users, Home, Menu, X, User, LogOut } from 'lucide-react';
+import { Calendar, BookOpen, Users, Home, Menu, X, User, LogOut, Award, BarChart4, Settings } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -27,6 +27,24 @@ const Navigation = () => {
   const handleLogout = () => {
     logout();
     navigate('/');
+  };
+
+  // Get role-specific dashboard link
+  const getDashboardLink = () => {
+    if (!user) return '/dashboard';
+    
+    switch (user.role) {
+      case 'mentor':
+        return '/mentor/dashboard';
+      case 'teacher':
+        return '/teacher/dashboard';
+      case 'student':
+        return '/student/dashboard';
+      case 'mentor_admin':
+        return '/mentor-admin/dashboard';
+      default:
+        return '/dashboard';
+    }
   };
 
   return (
@@ -69,13 +87,35 @@ const Navigation = () => {
               <Calendar size={18} />
               <span>Schedule</span>
             </Link>
+            {isAuthenticated && user?.role === 'student' && (
+              <Link to="/student/leaderboard" className="text-sm font-medium hover:text-primary flex items-center gap-1">
+                <Award size={18} />
+                <span>Leaderboard</span>
+              </Link>
+            )}
+            {isAuthenticated && (user?.role === 'teacher' || user?.role === 'mentor_admin') && (
+              <Link to="/course-management" className="text-sm font-medium hover:text-primary flex items-center gap-1">
+                <Settings size={18} />
+                <span>Manage Courses</span>
+              </Link>
+            )}
+            {isAuthenticated && user?.role === 'mentor_admin' && (
+              <Link to="/mentor-management" className="text-sm font-medium hover:text-primary flex items-center gap-1">
+                <BarChart4 size={18} />
+                <span>Manage Mentors</span>
+              </Link>
+            )}
           </nav>
         )}
 
         <div className="flex items-center gap-4">
           {isAuthenticated ? (
             <>
-              {!isMobile && <Link to="/dashboard" className="text-sm font-medium hover:text-primary">Dashboard</Link>}
+              {!isMobile && (
+                <Link to={getDashboardLink()} className="text-sm font-medium hover:text-primary">
+                  Dashboard
+                </Link>
+              )}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Avatar className="cursor-pointer">
@@ -88,11 +128,12 @@ const Navigation = () => {
                     <div className="flex flex-col space-y-1 leading-none">
                       <p className="font-medium">{user?.username}</p>
                       <p className="w-[200px] truncate text-sm text-muted-foreground">{user?.email}</p>
+                      <p className="text-xs text-muted-foreground capitalize">{user?.role.replace('_', ' ')}</p>
                     </div>
                   </div>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
-                    <Link to="/dashboard" className="cursor-pointer flex w-full items-center">
+                    <Link to={getDashboardLink()} className="cursor-pointer flex w-full items-center">
                       <Home className="mr-2 h-4 w-4" />
                       <span>Dashboard</span>
                     </Link>
@@ -160,10 +201,43 @@ const Navigation = () => {
               <span>Schedule</span>
             </Link>
             
+            {isAuthenticated && user?.role === 'student' && (
+              <Link 
+                to="/student/leaderboard" 
+                className="px-6 py-3 text-sm font-medium hover:bg-muted flex items-center gap-2"
+                onClick={toggleMobileMenu}
+              >
+                <Award size={18} />
+                <span>Leaderboard</span>
+              </Link>
+            )}
+            
+            {isAuthenticated && (user?.role === 'teacher' || user?.role === 'mentor_admin') && (
+              <Link 
+                to="/course-management" 
+                className="px-6 py-3 text-sm font-medium hover:bg-muted flex items-center gap-2"
+                onClick={toggleMobileMenu}
+              >
+                <Settings size={18} />
+                <span>Manage Courses</span>
+              </Link>
+            )}
+            
+            {isAuthenticated && user?.role === 'mentor_admin' && (
+              <Link 
+                to="/mentor-management" 
+                className="px-6 py-3 text-sm font-medium hover:bg-muted flex items-center gap-2"
+                onClick={toggleMobileMenu}
+              >
+                <BarChart4 size={18} />
+                <span>Manage Mentors</span>
+              </Link>
+            )}
+            
             {isAuthenticated ? (
               <>
                 <Link 
-                  to="/dashboard" 
+                  to={getDashboardLink()} 
                   className="px-6 py-3 text-sm font-medium hover:bg-muted flex items-center gap-2"
                   onClick={toggleMobileMenu}
                 >

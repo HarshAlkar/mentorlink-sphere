@@ -16,6 +16,13 @@ import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 import MentorRequest from "./pages/MentorRequest";
 import MentorSession from "./pages/MentorSession";
+import MentorDashboard from "./pages/MentorDashboard";
+import TeacherDashboard from "./pages/TeacherDashboard";
+import StudentDashboard from "./pages/StudentDashboard";
+import MentorAdminDashboard from "./pages/MentorAdminDashboard";
+import CourseManagement from "./pages/CourseManagement";
+import MentorManagement from "./pages/MentorManagement";
+import StudentLeaderboard from "./pages/StudentLeaderboard";
 
 const queryClient = new QueryClient();
 
@@ -37,6 +44,16 @@ const App = () => (
             <Route path="/profile" element={<Profile />} />
             <Route path="/mentors/:id/request" element={<MentorRequest />} />
             <Route path="/mentors/:id/session" element={<MentorSession />} />
+            
+            {/* New role-specific routes */}
+            <Route path="/mentor/dashboard" element={<MentorDashboard />} />
+            <Route path="/teacher/dashboard" element={<TeacherDashboard />} />
+            <Route path="/student/dashboard" element={<StudentDashboard />} />
+            <Route path="/student/leaderboard" element={<StudentLeaderboard />} />
+            <Route path="/mentor-admin/dashboard" element={<MentorAdminDashboard />} />
+            <Route path="/course-management" element={<CourseManagement />} />
+            <Route path="/mentor-management" element={<MentorManagement />} />
+            
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

@@ -6,7 +6,7 @@ type User = {
   username: string;
   email?: string;
   avatar?: string;
-  role: 'student' | 'mentor' | 'admin';
+  role: 'student' | 'mentor' | 'admin' | 'teacher' | 'mentor_admin';
 };
 
 type AuthContextType = {
@@ -14,7 +14,7 @@ type AuthContextType = {
   isAuthenticated: boolean;
   login: (username: string, password: string) => Promise<boolean>;
   logout: () => void;
-  register: (username: string, email: string, password: string) => Promise<boolean>;
+  register: (username: string, email: string, password: string, role?: string) => Promise<boolean>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -41,7 +41,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         id: '1',
         username: 'HARSH',
         email: 'harsh@example.com',
-        role: 'admin',
+        role: 'mentor_admin',
       };
       
       // Store user in localStorage
@@ -52,6 +52,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsAuthenticated(true);
       return true;
     }
+    
+    // Add demo users for different roles
+    const demoUsers: Record<string, {password: string, role: User['role']}> = {
+      'mentor': { password: '12345678', role: 'mentor' },
+      'teacher': { password: '12345678', role: 'teacher' },
+      'student': { password: '12345678', role: 'student' },
+      'admin': { password: '12345678', role: 'admin' },
+    };
+    
+    if (demoUsers[username.toLowerCase()] && demoUsers[username.toLowerCase()].password === password) {
+      const role = demoUsers[username.toLowerCase()].role;
+      const newUser: User = {
+        id: Date.now().toString(),
+        username: username,
+        email: `${username.toLowerCase()}@example.com`,
+        role: role,
+      };
+      
+      localStorage.setItem('user', JSON.stringify(newUser));
+      setUser(newUser);
+      setIsAuthenticated(true);
+      return true;
+    }
+    
     return false;
   };
 
@@ -63,14 +87,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // Register function
-  const register = async (username: string, email: string, password: string): Promise<boolean> => {
+  const register = async (username: string, email: string, password: string, role: string = 'student'): Promise<boolean> => {
     // In a real app, you would make an API call to register the user
     // For this demo, we'll simulate a successful registration
+    const validRole = ['student', 'mentor', 'admin', 'teacher', 'mentor_admin'].includes(role) 
+      ? role as User['role'] 
+      : 'student';
+      
     const newUser: User = {
       id: Date.now().toString(),
       username,
       email,
-      role: 'student',
+      role: validRole,
     };
     
     localStorage.setItem('user', JSON.stringify(newUser));
