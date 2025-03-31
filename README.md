@@ -2,7 +2,7 @@
 
 ## Project info
 
-URL: mentorlink-sphere.vercel.app
+URL: mentorlink-sphere.vercel.app / https://mentorlink-sphere-harshalkars-projects.vercel.app/
 
 ## How can I edit this code?
 
