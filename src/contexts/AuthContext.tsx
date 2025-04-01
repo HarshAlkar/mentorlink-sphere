@@ -28,16 +28,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
-      const parsedUser = JSON.parse(storedUser);
-      setUser(parsedUser);
-      setIsAuthenticated(true);
+      try {
+        const parsedUser = JSON.parse(storedUser);
+        setUser(parsedUser);
+        setIsAuthenticated(true);
+      } catch (error) {
+        console.error("Failed to parse user from localStorage:", error);
+        localStorage.removeItem('user');
+      }
     }
   }, []);
 
   // Login function
   const login = async (username: string, password: string): Promise<boolean> => {
     // For demo purposes, hardcoded credentials
-    if (username === 'HARSH' && password === '12345678') {
+    if (username.toUpperCase() === 'HARSH' && password === '12345678') {
       const newUser: User = {
         id: '1',
         username: 'HARSH',
@@ -63,14 +68,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       'admin': { password: '12345678', role: 'admin', avatar: '/placeholder.svg' },
     };
     
-    if (demoUsers[username.toLowerCase()] && demoUsers[username.toLowerCase()].password === password) {
-      const role = demoUsers[username.toLowerCase()].role;
+    const lowerUsername = username.toLowerCase();
+    if (demoUsers[lowerUsername] && demoUsers[lowerUsername].password === password) {
+      const role = demoUsers[lowerUsername].role;
       const newUser: User = {
         id: Date.now().toString(),
         username: username,
-        email: `${username.toLowerCase()}@example.com`,
+        email: `${lowerUsername}@example.com`,
         role: role,
-        avatar: demoUsers[username.toLowerCase()].avatar,
+        avatar: demoUsers[lowerUsername].avatar,
       };
       
       localStorage.setItem('user', JSON.stringify(newUser));
@@ -111,18 +117,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       avatar: avatar || '/placeholder.svg',
     };
     
-    localStorage.setItem('user', JSON.stringify(newUser));
-    setUser(newUser);
-    setIsAuthenticated(true);
-    return true;
+    try {
+      localStorage.setItem('user', JSON.stringify(newUser));
+      setUser(newUser);
+      setIsAuthenticated(true);
+      return true;
+    } catch (error) {
+      console.error("Error during registration:", error);
+      return false;
+    }
   };
 
   // Update user profile
   const updateUserProfile = (updates: Partial<User>) => {
     if (user) {
       const updatedUser = { ...user, ...updates };
-      localStorage.setItem('user', JSON.stringify(updatedUser));
-      setUser(updatedUser);
+      
+      try {
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+        setUser(updatedUser);
+      } catch (error) {
+        console.error("Error updating user profile:", error);
+      }
     }
   };
 

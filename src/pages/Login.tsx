@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -24,6 +25,7 @@ const Login = () => {
   const { toast } = useToast();
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -34,8 +36,12 @@ const Login = () => {
   });
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    setError(null);
+    setIsLoading(true);
+    
     try {
       const success = await login(values.username, values.password);
+      
       if (success) {
         toast({
           title: "Login successful",
@@ -43,10 +49,13 @@ const Login = () => {
         });
         navigate('/dashboard');
       } else {
-        setError("Invalid username or password");
+        setError("Invalid username or password. Try using demo credentials like username: 'student' or 'mentor' with password: '12345678'");
       }
     } catch (error) {
+      console.error("Login error:", error);
       setError("An unexpected error occurred. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -127,8 +136,12 @@ const Login = () => {
                   </Link>
                 </div>
 
-                <Button type="submit" className="w-full bg-gradient-to-r from-mentor to-mentee">
-                  Sign In
+                <Button 
+                  type="submit" 
+                  className="w-full bg-gradient-to-r from-mentor to-mentee"
+                  disabled={isLoading}
+                >
+                  {isLoading ? "Signing In..." : "Sign In"}
                 </Button>
 
                 <div className="text-center mt-4">
@@ -144,7 +157,7 @@ const Login = () => {
           </div>
           
           <div className="mt-6 text-center text-sm text-gray-500">
-            <p>For demo, use username: HARSH and password: 12345678</p>
+            <p>For demo, use username: 'student', 'mentor', 'teacher', or 'HARSH' with password: '12345678'</p>
           </div>
         </div>
       </main>
