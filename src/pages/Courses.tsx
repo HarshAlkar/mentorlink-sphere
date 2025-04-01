@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import Navigation from '@/components/Navigation';
 import Footer from '@/components/Footer';
 import CourseCard from '@/components/CourseCard';
@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Search } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 // Temporary mock data
 const mockCourses = [
@@ -101,6 +102,27 @@ const mockCourses = [
 ];
 
 const Courses = () => {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [sortBy, setSortBy] = useState('popular');
+
+  // Filter courses based on search and category
+  const filteredCourses = mockCourses.filter(course => {
+    const matchesSearch = course.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         course.description.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = categoryFilter === 'all' || course.category.toLowerCase().includes(categoryFilter.toLowerCase());
+    return matchesSearch && matchesCategory;
+  });
+
+  // Sort courses based on selection
+  const sortedCourses = [...filteredCourses].sort((a, b) => {
+    if (sortBy === 'newest') {
+      return parseInt(b.id) - parseInt(a.id); // Using ID as a proxy for creation date
+    }
+    // For demo purposes, no real sorting logic for other options
+    return 0;
+  });
+
   return (
     <div className="min-h-screen flex flex-col">
       <Navigation />
@@ -111,10 +133,19 @@ const Courses = () => {
           <div className="flex flex-col md:flex-row gap-4 mb-8">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={18} />
-              <Input placeholder="Search courses..." className="pl-10" />
+              <Input 
+                placeholder="Search courses..." 
+                className="pl-10"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
             </div>
             <div className="flex gap-4">
-              <Select defaultValue="all">
+              <Select 
+                defaultValue="all"
+                value={categoryFilter}
+                onValueChange={setCategoryFilter}
+              >
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Category" />
                 </SelectTrigger>
@@ -129,7 +160,11 @@ const Courses = () => {
                   <SelectItem value="marketing">Marketing</SelectItem>
                 </SelectContent>
               </Select>
-              <Select defaultValue="popular">
+              <Select 
+                defaultValue="popular"
+                value={sortBy}
+                onValueChange={setSortBy}
+              >
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Sort by" />
                 </SelectTrigger>
@@ -142,23 +177,42 @@ const Courses = () => {
             </div>
           </div>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {mockCourses.map((course) => (
-              <CourseCard
-                key={course.id}
-                id={course.id}
-                title={course.title}
-                instructor={course.instructor}
-                category={course.category}
-                thumbnail={course.thumbnail}
-                description={course.description}
-              />
-            ))}
-          </div>
+          {sortedCourses.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {sortedCourses.map((course) => (
+                <Link to={`/course/${course.id}`} key={course.id} className="no-underline text-current">
+                  <CourseCard
+                    id={course.id}
+                    title={course.title}
+                    instructor={course.instructor}
+                    category={course.category}
+                    thumbnail={course.thumbnail}
+                    description={course.description}
+                  />
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <h2 className="text-xl font-medium mb-2">No courses found</h2>
+              <p className="text-gray-500 mb-4">Try adjusting your search or filter to find what you're looking for.</p>
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setSearchTerm('');
+                  setCategoryFilter('all');
+                }}
+              >
+                Clear Filters
+              </Button>
+            </div>
+          )}
           
-          <div className="mt-8 flex justify-center">
-            <Button variant="outline" size="lg">Load More Courses</Button>
-          </div>
+          {sortedCourses.length > 0 && (
+            <div className="mt-8 flex justify-center">
+              <Button variant="outline" size="lg">Load More Courses</Button>
+            </div>
+          )}
         </div>
       </main>
       <Footer />

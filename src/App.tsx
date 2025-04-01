@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import Index from "./pages/Index";
 import Courses from "./pages/Courses";
+import CourseDetails from "./pages/CourseDetails";
 import Mentors from "./pages/Mentors";
 import Schedule from "./pages/Schedule";
 import Login from "./pages/Login";
@@ -27,6 +28,8 @@ import DocumentPage from "./pages/DocumentPage";
 import VideoSession from "./pages/VideoSession";
 import QuizPage from "./pages/QuizPage";
 import AssignmentPage from "./pages/AssignmentPage";
+import Certificates from "./pages/Certificates";
+import ChatBot from "./components/ChatBot";
 
 const queryClient = new QueryClient();
 
@@ -40,12 +43,14 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/courses" element={<Courses />} />
+            <Route path="/course/:courseId" element={<CourseDetails />} />
             <Route path="/mentors" element={<Mentors />} />
             <Route path="/schedule" element={<Schedule />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/certificates" element={<Certificates />} />
             <Route path="/mentors/:id/request" element={<MentorRequest />} />
             <Route path="/mentors/:id/session" element={<MentorSession />} />
             
@@ -60,15 +65,16 @@ const App = () => (
             <Route path="/course-management" element={<CourseManagement />} />
             <Route path="/mentor-management" element={<MentorManagement />} />
             
-            {/* New content type routes */}
+            {/* Content type routes */}
             <Route path="/document/:documentId" element={<DocumentPage />} />
-            <Route path="/video-session/:sessionId" element={<VideoSession />} />
+            <Route path="/video/:videoId" element={<VideoSession />} />
             <Route path="/quiz/:quizId" element={<QuizPage />} />
             <Route path="/assignment/:assignmentId" element={<AssignmentPage />} />
             
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
+          <ChatBot />
         </BrowserRouter>
       </TooltipProvider>
     </AuthProvider>
