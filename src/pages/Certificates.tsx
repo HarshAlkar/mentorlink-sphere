@@ -81,7 +81,7 @@ const Certificates = () => {
                 if (cert) {
                   return (
                     <Certificate
-                      userName={user?.name || 'Student'}
+                      userName={user?.username || 'Student'}
                       courseName={cert.courseName}
                       completionDate={cert.completionDate}
                       certificateId={cert.id}
