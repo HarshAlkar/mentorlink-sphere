@@ -5,6 +5,7 @@ import Footer from '@/components/Footer';
 import { useAuth } from '@/contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
 import ProfileSettings from '@/components/ProfileSettings';
+import SessionsOverview from '@/components/SessionsOverview';
 
 const Profile = () => {
   const { isAuthenticated } = useAuth();
@@ -19,7 +20,10 @@ const Profile = () => {
       <main className="flex-grow py-8 bg-gray-50">
         <div className="container mx-auto px-4">
           <h1 className="text-2xl font-bold mb-6">Your Profile</h1>
-          <ProfileSettings />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <ProfileSettings />
+            <SessionsOverview />
+          </div>
         </div>
       </main>
       <Footer />

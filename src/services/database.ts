@@ -16,6 +16,8 @@ export interface Session {
   endTime: Date | null;
   status: 'scheduled' | 'ongoing' | 'completed' | 'cancelled';
   messages: Message[];
+  title?: string;
+  description?: string;
 }
 
 // In-memory database (this would be a real database in production)

@@ -84,9 +84,9 @@ const Register = () => {
       if (success) {
         toast({
           title: "Registration successful",
-          description: "Your account has been created.",
+          description: "Your account has been created. Please log in.",
         });
-        navigate('/dashboard');
+        navigate('/login');
       } else {
         setError("Failed to register. Please try again.");
       }

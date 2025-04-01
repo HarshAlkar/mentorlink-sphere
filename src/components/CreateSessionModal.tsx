@@ -164,7 +164,7 @@ const CreateSessionModal = ({ isOpen, onClose }: CreateSessionModalProps) => {
                 mode="single"
                 selected={date}
                 onSelect={setDate}
-                className="border rounded-md"
+                className="border rounded-md pointer-events-auto"
                 disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
               />
             </div>

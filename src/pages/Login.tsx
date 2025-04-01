@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -64,6 +63,11 @@ const Login = () => {
             <div className="text-center mb-8">
               <h1 className="text-2xl font-bold text-gray-900">Welcome Back</h1>
               <p className="text-gray-600 mt-2">Sign in to your MentorLink account</p>
+              <p className="text-sm text-primary mt-2">
+                <Link to="/register" className="hover:underline">
+                  Don't have an account? Register here
+                </Link>
+              </p>
             </div>
 
             {error && (
