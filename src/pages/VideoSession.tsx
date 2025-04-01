@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import Navigation from '@/components/Navigation';
 import Footer from '@/components/Footer';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { 
@@ -22,50 +22,18 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
+import { useToast } from '@/hooks/use-toast';
 
-// Mock video session data
-const mockVideoSessions = [
-  {
-    id: 'video1',
-    title: 'CSS Grid & Flexbox Masterclass',
-    courseId: '1',
-    instructor: 'Dr. Maria Garcia',
-    thumbnail: 'https://images.unsplash.com/photo-1593720213428-28a5b9e94613',
-    description: 'Master modern CSS layout techniques with Grid and Flexbox.',
-    duration: '45:00',
-    scheduled: '2023-10-15T15:00:00Z',
-    participants: [
-      { id: 'user1', name: 'Alex Chen', avatar: '/placeholder.svg', role: 'student' },
-      { id: 'user2', name: 'Sarah Johnson', avatar: '/placeholder.svg', role: 'student' },
-      { id: 'user3', name: 'Dr. Maria Garcia', avatar: '/placeholder.svg', role: 'instructor' },
-    ]
-  },
-  {
-    id: 'video2',
-    title: 'JavaScript Promises & Async/Await',
-    courseId: '1',
-    instructor: 'Robert Johnson',
-    thumbnail: 'https://images.unsplash.com/photo-1517180102446-f3ece451e9d8',
-    description: 'Learn how to work with asynchronous JavaScript using Promises and async/await.',
-    duration: '60:00',
-    scheduled: '2023-10-20T14:00:00Z',
-    participants: [
-      { id: 'user1', name: 'Alex Chen', avatar: '/placeholder.svg', role: 'student' },
-      { id: 'user4', name: 'Robert Johnson', avatar: '/placeholder.svg', role: 'instructor' },
-    ]
-  },
-];
-
-// Mock chat messages
+// Initial mock chat messages
 const initialChatMessages = [
-  { id: 'msg1', user: 'Dr. Maria Garcia', message: 'Welcome everyone to our CSS Grid & Flexbox Masterclass!', time: '15:01', isInstructor: true },
-  { id: 'msg2', user: 'Alex Chen', message: 'Excited to learn about Grid!', time: '15:02', isInstructor: false },
-  { id: 'msg3', user: 'Sarah Johnson', message: 'Is Flexbox still relevant with Grid available?', time: '15:03', isInstructor: false },
-  { id: 'msg4', user: 'Dr. Maria Garcia', message: 'Great question Sarah! Yes, Flexbox is still very relevant. Grid is for 2D layouts while Flexbox excels at 1D layouts. We\'ll cover the ideal use cases for both.', time: '15:04', isInstructor: true },
+  { id: 'msg1', user: 'Dr. Maria Garcia', message: 'Welcome to our session!', time: '15:01', isInstructor: true },
+  { id: 'msg2', user: 'Alex Chen', message: 'Thank you for accepting my session request!', time: '15:02', isInstructor: false },
 ];
 
 const VideoSession = () => {
   const { sessionId } = useParams<{ sessionId: string }>();
+  const navigate = useNavigate();
+  const { toast } = useToast();
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [audioEnabled, setAudioEnabled] = useState(true);
@@ -80,11 +48,68 @@ const VideoSession = () => {
     // Simulate loading session
     setLoading(true);
     setTimeout(() => {
-      const foundSession = mockVideoSessions.find(s => s.id === sessionId);
+      // First check local storage for sessions
+      const storedSessions = JSON.parse(localStorage.getItem('videoSessions') || '[]');
+      let foundSession = storedSessions.find((s: any) => s.id === sessionId);
+      
+      // If not found in localStorage, check mock data
+      if (!foundSession) {
+        // Mock video session data
+        const mockVideoSessions = [
+          {
+            id: 'video1',
+            title: 'CSS Grid & Flexbox Masterclass',
+            courseId: '1',
+            instructor: 'Dr. Maria Garcia',
+            thumbnail: 'https://images.unsplash.com/photo-1593720213428-28a5b9e94613',
+            description: 'Master modern CSS layout techniques with Grid and Flexbox.',
+            duration: '45:00',
+            scheduled: '2023-10-15T15:00:00Z',
+            participants: [
+              { id: 'user1', name: 'Alex Chen', avatar: '/placeholder.svg', role: 'student' },
+              { id: 'user2', name: 'Sarah Johnson', avatar: '/placeholder.svg', role: 'student' },
+              { id: 'user3', name: 'Dr. Maria Garcia', avatar: '/placeholder.svg', role: 'instructor' },
+            ]
+          },
+          {
+            id: 'video2',
+            title: 'JavaScript Promises & Async/Await',
+            courseId: '1',
+            instructor: 'Robert Johnson',
+            thumbnail: 'https://images.unsplash.com/photo-1517180102446-f3ece451e9d8',
+            description: 'Learn how to work with asynchronous JavaScript using Promises and async/await.',
+            duration: '60:00',
+            scheduled: '2023-10-20T14:00:00Z',
+            participants: [
+              { id: 'user1', name: 'Alex Chen', avatar: '/placeholder.svg', role: 'student' },
+              { id: 'user4', name: 'Robert Johnson', avatar: '/placeholder.svg', role: 'instructor' },
+            ]
+          },
+        ];
+        
+        foundSession = mockVideoSessions.find(s => s.id === sessionId);
+      }
+      
       setSession(foundSession || null);
       setLoading(false);
+      
+      if (foundSession) {
+        // Simulate a welcome message from the instructor
+        if (foundSession.instructor && user?.username !== foundSession.instructor) {
+          setTimeout(() => {
+            const welcomeMessage = {
+              id: `msg${Date.now()}`,
+              user: foundSession.instructor,
+              message: `Welcome to the ${foundSession.title} session! Let me know if you have any questions.`,
+              time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              isInstructor: true,
+            };
+            setChatMessages(prev => [...prev, welcomeMessage]);
+          }, 2000);
+        }
+      }
     }, 500);
-  }, [sessionId]);
+  }, [sessionId, user?.username]);
 
   const sendMessage = () => {
     if (!newMessage.trim()) return;
@@ -99,6 +124,17 @@ const VideoSession = () => {
     
     setChatMessages([...chatMessages, message]);
     setNewMessage('');
+  };
+  
+  const handleEndCall = () => {
+    const confirmEnd = window.confirm("Are you sure you want to end this session?");
+    if (confirmEnd) {
+      toast({
+        title: "Session ended",
+        description: "Your video session has been ended successfully."
+      });
+      navigate('/dashboard');
+    }
   };
 
   if (!isAuthenticated) {
@@ -181,7 +217,7 @@ const VideoSession = () => {
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center">
               <Button variant="ghost" size="sm" asChild className="text-white">
-                <Link to={`/courses/${session.courseId}`}>
+                <Link to="/dashboard">
                   <ArrowLeft className="mr-2 h-4 w-4" />
                   Leave Session
                 </Link>
@@ -250,7 +286,7 @@ const VideoSession = () => {
                       variant="destructive" 
                       size="sm" 
                       className="rounded-full px-6"
-                      onClick={() => window.history.back()}
+                      onClick={handleEndCall}
                     >
                       End Call
                     </Button>
@@ -259,7 +295,7 @@ const VideoSession = () => {
               </div>
               
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
-                {session.participants.map((participant: any) => (
+                {session.participants && session.participants.map((participant: any) => (
                   <div key={participant.id} className="relative bg-gray-800 rounded-md overflow-hidden aspect-video">
                     <div className="absolute inset-0 flex items-center justify-center">
                       {participant.avatar ? (
@@ -276,7 +312,7 @@ const VideoSession = () => {
                     </div>
                     <div className="absolute bottom-0 left-0 right-0 bg-black/60 px-2 py-1 text-xs">
                       {participant.name} 
-                      {participant.role === 'instructor' && ' (Instructor)'}
+                      {(participant.role === 'instructor' || participant.role === 'teacher' || participant.role === 'mentor') && ' (Instructor)'}
                     </div>
                   </div>
                 ))}
@@ -340,12 +376,12 @@ const VideoSession = () => {
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm flex items-center">
                         <Users className="mr-2 h-4 w-4" />
-                        Participants ({session.participants.length})
+                        Participants ({session.participants ? session.participants.length : 0})
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-3 h-[calc(100vh-380px)] md:h-[60vh] overflow-y-auto pr-2">
-                        {session.participants.map((participant: any) => (
+                        {session.participants && session.participants.map((participant: any) => (
                           <div key={participant.id} className="flex items-center justify-between p-2 rounded hover:bg-gray-700">
                             <div className="flex items-center">
                               <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center mr-3">
@@ -354,7 +390,7 @@ const VideoSession = () => {
                               <div>
                                 <p className="text-sm font-medium">
                                   {participant.name}
-                                  {participant.role === 'instructor' && 
+                                  {(participant.role === 'instructor' || participant.role === 'teacher' || participant.role === 'mentor') && 
                                     <span className="ml-2 text-xs py-0.5 px-1.5 bg-blue-900 text-blue-200 rounded">Instructor</span>
                                   }
                                 </p>

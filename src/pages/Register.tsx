@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -12,8 +12,9 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Camera, Upload } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const formSchema = z.object({
@@ -37,6 +38,8 @@ const Register = () => {
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [profileImage, setProfileImage] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -50,9 +53,34 @@ const Register = () => {
     },
   });
 
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        if (e.target?.result) {
+          setProfileImage(e.target.result as string);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const triggerFileInput = () => {
+    fileInputRef.current?.click();
+  };
+
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
-      const success = await register(values.username, values.email, values.password, values.role);
+      // Include profile image in registration if available
+      const success = await register(
+        values.username, 
+        values.email, 
+        values.password, 
+        values.role,
+        profileImage || undefined
+      );
+      
       if (success) {
         toast({
           title: "Registration successful",
@@ -83,6 +111,33 @@ const Register = () => {
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
+
+            <div className="flex justify-center mb-6">
+              <div className="relative">
+                <Avatar className="h-24 w-24">
+                  <AvatarImage src={profileImage || ""} alt="Profile" />
+                  <AvatarFallback className="bg-gray-200">
+                    <Camera className="h-8 w-8 text-gray-400" />
+                  </AvatarFallback>
+                </Avatar>
+                <Button 
+                  type="button" 
+                  size="icon" 
+                  variant="outline" 
+                  className="absolute bottom-0 right-0 rounded-full h-8 w-8 bg-primary text-white hover:bg-primary/90"
+                  onClick={triggerFileInput}
+                >
+                  <Upload className="h-4 w-4" />
+                </Button>
+                <input 
+                  ref={fileInputRef}
+                  type="file" 
+                  accept="image/*" 
+                  className="hidden" 
+                  onChange={handleImageUpload}
+                />
+              </div>
+            </div>
 
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -137,6 +192,7 @@ const Register = () => {
                   )}
                 />
 
+                {/* Password fields */}
                 <FormField
                   control={form.control}
                   name="password"
