@@ -32,6 +32,14 @@ type IncompleteEntry = {
   lastActivity: string;
 };
 
+// Define the demo user type to ensure it matches what we need
+type DemoUser = {
+  id: string;
+  username: string;
+  avatar: string;
+  role: string;
+};
+
 const StudentLeaderboard = () => {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -69,7 +77,7 @@ const StudentLeaderboard = () => {
       });
       
       // Demo data for additional users to make the leaderboard more interesting
-      const demoUsers = [
+      const demoUsers: DemoUser[] = [
         { id: 'user1', username: 'JohnDoe', avatar: '/placeholder.svg', role: 'student' },
         { id: 'user2', username: 'AliceSmith', avatar: '/placeholder.svg', role: 'student' },
         { id: 'user3', username: 'BobJohnson', avatar: '/placeholder.svg', role: 'student' },
@@ -78,8 +86,17 @@ const StudentLeaderboard = () => {
       ];
       
       // Combine real users with demo data
-      const allUsers = [...demoUsers];
-      if (user) allUsers.push(user);
+      const allUsers: (DemoUser | typeof user)[] = [...demoUsers];
+      
+      // Add the current user with avatar defaulting to placeholder if not available
+      if (user) {
+        allUsers.push({
+          id: user.id,
+          username: user.username,
+          avatar: user.avatar || '/placeholder.svg',
+          role: user.role,
+        });
+      }
       
       // Create leaderboard entries
       const leaderboardEntries: LeaderboardEntry[] = allUsers.map(u => {

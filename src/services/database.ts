@@ -1,4 +1,3 @@
-
 // Types for our database entities
 export interface Message {
   id: string;
@@ -81,8 +80,8 @@ export interface Certificate {
   id: string;
   userId: string;
   courseId: string;
-  issuedAt: Date;
-  completionDate: Date;
+  issuedAt: string; // Changed from Date to string to match how we're using it
+  completionDate: string; // Changed from Date to string to match how we're using it
 }
 
 // In-memory database (this would be a real database in production)
@@ -313,8 +312,8 @@ class InMemoryDatabase {
       id,
       userId,
       courseId,
-      issuedAt: new Date(),
-      completionDate: new Date()
+      issuedAt: new Date().toISOString(),
+      completionDate: new Date().toISOString()
     };
     
     this.certificates.push(certificate);
