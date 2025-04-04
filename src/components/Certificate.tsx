@@ -5,15 +5,15 @@ import { Button } from '@/components/ui/button';
 import { Download, Share2 } from 'lucide-react';
 
 interface CertificateProps {
-  userName: string;
-  courseName: string;
-  completionDate: Date;
+  studentName: string;
+  courseTitle: string;
+  completionDate: string;
   certificateId: string;
 }
 
 const Certificate: React.FC<CertificateProps> = ({
-  userName,
-  courseName,
+  studentName,
+  courseTitle,
   completionDate,
   certificateId,
 }) => {
@@ -39,15 +39,11 @@ const Certificate: React.FC<CertificateProps> = ({
             
             <div className="py-8 space-y-4">
               <p className="text-lg">This is to certify that</p>
-              <h2 className="text-2xl font-bold">{userName}</h2>
+              <h2 className="text-2xl font-bold">{studentName}</h2>
               <p className="text-lg">has successfully completed the course</p>
-              <h3 className="text-xl font-semibold">{courseName}</h3>
+              <h3 className="text-xl font-semibold">{courseTitle}</h3>
               <p className="text-md text-gray-600">
-                on {completionDate.toLocaleDateString('en-US', { 
-                  year: 'numeric', 
-                  month: 'long', 
-                  day: 'numeric' 
-                })}
+                on {completionDate}
               </p>
             </div>
             
