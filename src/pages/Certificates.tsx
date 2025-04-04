@@ -1,176 +1,196 @@
-
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import Navigation from '@/components/Navigation';
 import Footer from '@/components/Footer';
 import Certificate from '@/components/Certificate';
 import { useAuth } from '@/contexts/AuthContext';
-import { Navigate } from 'react-router-dom';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
-import { Award, CheckCircle, BookOpen } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Download, Share2 } from 'lucide-react';
 
-// Mock certificate data
-const mockCertificates = [
-  {
-    id: 'cert-001',
-    courseName: 'Introduction to Web Development',
-    completionDate: new Date('2023-10-15'),
-    courseId: '1'
-  },
-  {
-    id: 'cert-002',
-    courseName: 'Data Science Fundamentals with Python',
-    completionDate: new Date('2023-11-05'),
-    courseId: '2'
-  }
-];
-
-// Mock courses in progress
-const mockCoursesInProgress = [
-  {
-    id: '3',
-    title: 'UX/UI Design Principles',
-    progress: 65,
-    estimatedCompletion: '2 weeks'
-  },
-  {
-    id: '4',
-    title: 'Machine Learning Essentials',
-    progress: 30,
-    estimatedCompletion: '1 month'
-  }
-];
+interface CertificateData {
+  id: string;
+  userId: string;
+  courseId: string;
+  issuedAt: string;
+  completionDate: string;
+  courseTitle: string;
+}
 
 const Certificates = () => {
-  const { user, isAuthenticated } = useAuth();
-  const [selectedCertificate, setSelectedCertificate] = useState<string | null>(null);
-  
-  if (!isAuthenticated) {
-    return <Navigate to="/login" />;
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [certificates, setCertificates] = useState<CertificateData[]>([]);
+  const [selectedCertificate, setSelectedCertificate] = useState<CertificateData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const params = new URLSearchParams(location.search);
+  const courseId = params.get('courseId');
+
+  useEffect(() => {
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "You need to be logged in to view certificates",
+        variant: "destructive",
+      });
+      navigate("/login");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const storedCertificates = JSON.parse(localStorage.getItem('certificates') || '[]');
+      const userCertificates = storedCertificates.filter(
+        (cert: CertificateData) => cert.userId === user.id
+      );
+
+      setCertificates(userCertificates);
+
+      if (courseId) {
+        const courseSpecificCert = userCertificates.find(
+          (cert: CertificateData) => cert.courseId === courseId
+        );
+        if (courseSpecificCert) {
+          setSelectedCertificate(courseSpecificCert);
+        }
+      } else if (userCertificates.length > 0) {
+        setSelectedCertificate(userCertificates[0]);
+      }
+
+      setLoading(false);
+    } catch (error) {
+      console.error("Error loading certificates:", error);
+      setLoading(false);
+    }
+  }, [user, navigate, toast, courseId]);
+
+  const handleCertificateSelect = (certificate: CertificateData) => {
+    setSelectedCertificate(certificate);
+  };
+
+  const handleDownload = () => {
+    toast({
+      title: "Certificate Downloaded",
+      description: "Your certificate has been downloaded successfully",
+    });
+  };
+
+  const handleShare = () => {
+    toast({
+      title: "Share Link Generated",
+      description: "A shareable link has been copied to your clipboard",
+    });
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Navigation />
+        <main className="flex-grow flex items-center justify-center">
+          <p>Loading certificates...</p>
+        </main>
+        <Footer />
+      </div>
+    );
   }
-
-  const viewCertificate = (certId: string) => {
-    setSelectedCertificate(certId);
-  };
-
-  const closeCertificate = () => {
-    setSelectedCertificate(null);
-  };
-
-  const getCertificateById = (certId: string) => {
-    return mockCertificates.find(cert => cert.id === certId);
-  };
 
   return (
     <div className="min-h-screen flex flex-col">
       <Navigation />
-      <main className="flex-grow bg-gray-50 py-8">
+      <main className="flex-grow py-8 bg-gray-50">
         <div className="container mx-auto px-4">
-          <h1 className="text-3xl font-bold mb-2">Your Achievements</h1>
-          <p className="text-gray-600 mb-6">Track your progress and showcase your accomplishments</p>
+          <h1 className="text-3xl font-bold mb-8">Your Certificates</h1>
           
-          {selectedCertificate ? (
-            <div className="mb-6">
-              <Button variant="outline" onClick={closeCertificate} className="mb-4">
-                Back to Certificates
+          {certificates.length === 0 ? (
+            <div className="bg-white rounded-lg shadow p-8 text-center">
+              <h2 className="text-2xl font-semibold mb-4">No Certificates Yet</h2>
+              <p className="text-gray-600 mb-6">
+                Complete courses to earn certificates that showcase your skills and knowledge.
+              </p>
+              <Button onClick={() => navigate('/courses')}>
+                Browse Courses
               </Button>
-              
-              {(() => {
-                const cert = getCertificateById(selectedCertificate);
-                if (cert) {
-                  return (
-                    <Certificate
-                      userName={user?.username || 'Student'}
-                      courseName={cert.courseName}
-                      completionDate={cert.completionDate}
-                      certificateId={cert.id}
-                    />
-                  );
-                }
-                return null;
-              })()}
             </div>
           ) : (
-            <Tabs defaultValue="certificates">
-              <TabsList className="mb-6">
-                <TabsTrigger value="certificates">Certificates ({mockCertificates.length})</TabsTrigger>
-                <TabsTrigger value="progress">In Progress ({mockCoursesInProgress.length})</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="certificates">
-                {mockCertificates.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {mockCertificates.map((cert) => (
-                      <Card key={cert.id} className="border border-primary/20">
-                        <CardHeader>
-                          <div className="flex justify-between items-start">
-                            <CardTitle>{cert.courseName}</CardTitle>
-                            <Award className="h-6 w-6 text-primary" />
-                          </div>
-                          <CardDescription>
-                            Completed on {cert.completionDate.toLocaleDateString()}
-                          </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm text-gray-500">Certificate ID: {cert.id}</span>
-                            <Button onClick={() => viewCertificate(cert.id)} size="sm">
-                              View Certificate
-                            </Button>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              <div className="lg:col-span-2">
+                {selectedCertificate && (
+                  <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+                    <div className="p-4 border-b flex justify-between items-center">
+                      <h2 className="text-xl font-semibold">
+                        {selectedCertificate.courseTitle} Certificate
+                      </h2>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="flex items-center gap-1"
+                          onClick={handleDownload}
+                        >
+                          <Download size={16} />
+                          <span className="hidden sm:inline">Download</span>
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="flex items-center gap-1"
+                          onClick={handleShare}
+                        >
+                          <Share2 size={16} />
+                          <span className="hidden sm:inline">Share</span>
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="p-6">
+                      <Certificate
+                        courseTitle={selectedCertificate.courseTitle}
+                        studentName={user?.username || "Student"}
+                        completionDate={new Date(selectedCertificate.completionDate).toLocaleDateString()}
+                        certificateId={selectedCertificate.id}
+                      />
+                    </div>
                   </div>
-                ) : (
-                  <Card>
-                    <CardContent className="flex flex-col items-center justify-center py-8">
-                      <Award className="h-12 w-12 text-gray-300 mb-4" />
-                      <h3 className="text-xl font-semibold mb-2">No Certificates Yet</h3>
-                      <p className="text-gray-500 text-center mb-4">
-                        Complete courses to earn your first certificate
-                      </p>
-                      <Button>Explore Courses</Button>
-                    </CardContent>
-                  </Card>
                 )}
-              </TabsContent>
-              
-              <TabsContent value="progress">
-                <div className="space-y-4">
-                  {mockCoursesInProgress.map((course) => (
-                    <Card key={course.id}>
-                      <CardContent className="p-4">
-                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                          <div className="flex items-start gap-3">
-                            <div className="bg-primary/10 rounded-lg p-2 mt-1">
-                              <BookOpen className="h-6 w-6 text-primary" />
-                            </div>
-                            <div>
-                              <h3 className="font-semibold">{course.title}</h3>
-                              <div className="mt-2">
-                                <div className="flex items-center justify-between mb-1">
-                                  <span className="text-sm text-gray-700">{course.progress}% complete</span>
-                                  <span className="text-sm text-gray-500">Est. completion: {course.estimatedCompletion}</span>
-                                </div>
-                                <div className="w-full bg-gray-200 rounded-full h-2">
-                                  <div
-                                    className="bg-primary h-2 rounded-full"
-                                    style={{ width: `${course.progress}%` }}
-                                  ></div>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                          <Button variant="outline" className="shrink-0">Continue Learning</Button>
+              </div>
+
+              <div className="space-y-4">
+                <Card>
+                  <CardContent className="p-4">
+                    <h3 className="font-semibold text-lg mb-4">Your Achievements</h3>
+                    <div className="space-y-2">
+                      {certificates.map((cert) => (
+                        <div
+                          key={cert.id}
+                          className={`p-3 rounded-lg cursor-pointer ${
+                            selectedCertificate?.id === cert.id
+                              ? 'bg-primary/10 border border-primary/30'
+                              : 'bg-gray-100 hover:bg-gray-200'
+                          }`}
+                          onClick={() => handleCertificateSelect(cert)}
+                        >
+                          <h4 className="font-medium">{cert.courseTitle}</h4>
+                          <p className="text-sm text-gray-500">
+                            Issued on {new Date(cert.issuedAt).toLocaleDateString()}
+                          </p>
                         </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <div className="bg-primary/5 rounded-lg p-4">
+                  <h3 className="font-semibold mb-2">About Certificates</h3>
+                  <p className="text-sm text-gray-600">
+                    Certificates verify your course completion and can be shared on your professional profiles. 
+                    They showcase your skills and dedication to continuous learning.
+                  </p>
                 </div>
-              </TabsContent>
-            </Tabs>
+              </div>
+            </div>
           )}
         </div>
       </main>

@@ -1,6 +1,6 @@
 
-import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
@@ -12,7 +12,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 
 const formSchema = z.object({
   username: z.string().min(1, "Username is required"),
@@ -20,12 +20,23 @@ const formSchema = z.object({
 });
 
 const Login = () => {
-  const { login } = useAuth();
+  const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Get redirect path from location state, or default to dashboard
+  const from = location.state?.from || "/dashboard";
+
+  // If already authenticated, redirect to dashboard
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate(from);
+    }
+  }, [isAuthenticated, navigate, from]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -47,7 +58,7 @@ const Login = () => {
           title: "Login successful",
           description: "Welcome back!",
         });
-        navigate('/dashboard');
+        navigate(from);
       } else {
         setError("Invalid username or password. Try using demo credentials like username: 'student' or 'mentor' with password: '12345678'");
       }
@@ -61,6 +72,25 @@ const Login = () => {
 
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
+  };
+
+  const handleDemoLogin = async (demoUser: string) => {
+    setIsLoading(true);
+    try {
+      const success = await login(demoUser, '12345678');
+      if (success) {
+        toast({
+          title: "Demo Login Successful",
+          description: `You are now logged in as ${demoUser}`,
+        });
+        navigate(from);
+      }
+    } catch (error) {
+      console.error("Demo login error:", error);
+      setError("Failed to login with demo account. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -141,7 +171,14 @@ const Login = () => {
                   className="w-full bg-gradient-to-r from-mentor to-mentee"
                   disabled={isLoading}
                 >
-                  {isLoading ? "Signing In..." : "Sign In"}
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Signing In...
+                    </>
+                  ) : (
+                    "Sign In"
+                  )}
                 </Button>
 
                 <div className="text-center mt-4">
@@ -154,6 +191,54 @@ const Login = () => {
                 </div>
               </form>
             </Form>
+            
+            <div className="mt-8">
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-300"></div>
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="px-2 bg-white text-gray-500">Quick Demo Login</span>
+                </div>
+              </div>
+              
+              <div className="mt-4 grid grid-cols-2 gap-3">
+                <Button 
+                  type="button" 
+                  variant="outline"
+                  disabled={isLoading}
+                  onClick={() => handleDemoLogin('student')}
+                >
+                  Login as Student
+                </Button>
+                <Button 
+                  type="button" 
+                  variant="outline"
+                  disabled={isLoading}
+                  onClick={() => handleDemoLogin('mentor')}
+                >
+                  Login as Mentor
+                </Button>
+              </div>
+              <div className="mt-2 grid grid-cols-2 gap-3">
+                <Button 
+                  type="button" 
+                  variant="outline"
+                  disabled={isLoading}
+                  onClick={() => handleDemoLogin('teacher')}
+                >
+                  Login as Teacher
+                </Button>
+                <Button 
+                  type="button" 
+                  variant="outline"
+                  disabled={isLoading}
+                  onClick={() => handleDemoLogin('admin')}
+                >
+                  Login as Admin
+                </Button>
+              </div>
+            </div>
           </div>
           
           <div className="mt-6 text-center text-sm text-gray-500">

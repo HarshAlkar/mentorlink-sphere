@@ -1,6 +1,6 @@
 
-import React, { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import Navigation from '@/components/Navigation';
 import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,7 @@ import { Progress } from '@/components/ui/progress';
 import { Check, Lock, PlayCircle, FileText, MessageSquare, Award, Clock, Users } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { database } from '@/services/database';
 
 // Mock course data
 const mockCourseData = {
@@ -35,10 +36,10 @@ const mockCourseData = {
         title: 'Getting Started with HTML',
         description: 'Learn the basics of HTML markup and document structure',
         lessons: [
-          { id: 'lesson1', title: 'Introduction to HTML', type: 'video', duration: '10:25', isCompleted: true },
-          { id: 'lesson2', title: 'HTML Document Structure', type: 'video', duration: '15:10', isCompleted: true },
-          { id: 'lesson3', title: 'Working with Text Elements', type: 'document', duration: '12:45', isCompleted: false },
-          { id: 'lesson4', title: 'HTML Quiz', type: 'quiz', duration: '15:00', isCompleted: false },
+          { id: 'lesson1', title: 'Introduction to HTML', type: 'video', duration: '10:25', isCompleted: true, isUnlocked: true },
+          { id: 'lesson2', title: 'HTML Document Structure', type: 'video', duration: '15:10', isCompleted: false, isUnlocked: true },
+          { id: 'lesson3', title: 'Working with Text Elements', type: 'document', duration: '12:45', isCompleted: false, isUnlocked: true },
+          { id: 'lesson4', title: 'HTML Quiz', type: 'quiz', duration: '15:00', isCompleted: false, isUnlocked: true },
         ]
       },
       {
@@ -46,10 +47,10 @@ const mockCourseData = {
         title: 'CSS Styling Basics',
         description: 'Learn how to style your HTML documents with CSS',
         lessons: [
-          { id: 'lesson5', title: 'Introduction to CSS', type: 'video', duration: '12:30', isCompleted: false },
-          { id: 'lesson6', title: 'Selectors and Properties', type: 'document', duration: '20:15', isCompleted: false },
-          { id: 'lesson7', title: 'Box Model', type: 'video', duration: '14:20', isCompleted: false },
-          { id: 'lesson8', title: 'CSS Layout Assignment', type: 'assignment', duration: '45:00', isCompleted: false },
+          { id: 'lesson5', title: 'Introduction to CSS', type: 'video', duration: '12:30', isCompleted: false, isUnlocked: false },
+          { id: 'lesson6', title: 'Selectors and Properties', type: 'document', duration: '20:15', isCompleted: false, isUnlocked: false },
+          { id: 'lesson7', title: 'Box Model', type: 'video', duration: '14:20', isCompleted: false, isUnlocked: false },
+          { id: 'lesson8', title: 'CSS Layout Assignment', type: 'assignment', duration: '45:00', isCompleted: false, isUnlocked: false },
         ]
       },
       {
@@ -57,11 +58,11 @@ const mockCourseData = {
         title: 'JavaScript Fundamentals',
         description: 'Add interactivity to your websites with JavaScript',
         lessons: [
-          { id: 'lesson9', title: 'Introduction to JavaScript', type: 'video', duration: '18:45', isCompleted: false },
-          { id: 'lesson10', title: 'Variables and Data Types', type: 'document', duration: '22:30', isCompleted: false },
-          { id: 'lesson11', title: 'Functions and Events', type: 'video', duration: '25:15', isCompleted: false },
-          { id: 'lesson12', title: 'DOM Manipulation', type: 'video', duration: '19:50', isCompleted: false },
-          { id: 'lesson13', title: 'Final Project', type: 'assignment', duration: '120:00', isCompleted: false },
+          { id: 'lesson9', title: 'Introduction to JavaScript', type: 'video', duration: '18:45', isCompleted: false, isUnlocked: false },
+          { id: 'lesson10', title: 'Variables and Data Types', type: 'document', duration: '22:30', isCompleted: false, isUnlocked: false },
+          { id: 'lesson11', title: 'Functions and Events', type: 'video', duration: '25:15', isCompleted: false, isUnlocked: false },
+          { id: 'lesson12', title: 'DOM Manipulation', type: 'video', duration: '19:50', isCompleted: false, isUnlocked: false },
+          { id: 'lesson13', title: 'Final Project', type: 'assignment', duration: '120:00', isCompleted: false, isUnlocked: false },
         ]
       }
     ]
@@ -88,10 +89,10 @@ const mockCourseData = {
         title: 'Introduction to Python',
         description: 'Learn the basics of Python programming language',
         lessons: [
-          { id: 'lesson1', title: 'Getting Started with Python', type: 'video', duration: '14:30', isCompleted: false },
-          { id: 'lesson2', title: 'Variables and Data Types', type: 'document', duration: '18:20', isCompleted: false },
-          { id: 'lesson3', title: 'Control Flow', type: 'video', duration: '20:15', isCompleted: false },
-          { id: 'lesson4', title: 'Functions', type: 'video', duration: '16:45', isCompleted: false },
+          { id: 'lesson1', title: 'Getting Started with Python', type: 'video', duration: '14:30', isCompleted: false, isUnlocked: true },
+          { id: 'lesson2', title: 'Variables and Data Types', type: 'document', duration: '18:20', isCompleted: false, isUnlocked: true },
+          { id: 'lesson3', title: 'Control Flow', type: 'video', duration: '20:15', isCompleted: false, isUnlocked: true },
+          { id: 'lesson4', title: 'Functions', type: 'video', duration: '16:45', isCompleted: false, isUnlocked: true },
         ]
       },
       {
@@ -99,11 +100,11 @@ const mockCourseData = {
         title: 'Data Analysis with NumPy and Pandas',
         description: 'Learn how to analyze data using NumPy and Pandas libraries',
         lessons: [
-          { id: 'lesson5', title: 'Introduction to NumPy', type: 'video', duration: '22:10', isCompleted: false },
-          { id: 'lesson6', title: 'Working with Arrays', type: 'document', duration: '25:30', isCompleted: false },
-          { id: 'lesson7', title: 'Introduction to Pandas', type: 'video', duration: '19:45', isCompleted: false },
-          { id: 'lesson8', title: 'Data Cleaning', type: 'video', duration: '27:20', isCompleted: false },
-          { id: 'lesson9', title: 'Data Analysis Assignment', type: 'assignment', duration: '60:00', isCompleted: false },
+          { id: 'lesson5', title: 'Introduction to NumPy', type: 'video', duration: '22:10', isCompleted: false, isUnlocked: false },
+          { id: 'lesson6', title: 'Working with Arrays', type: 'document', duration: '25:30', isCompleted: false, isUnlocked: false },
+          { id: 'lesson7', title: 'Introduction to Pandas', type: 'video', duration: '19:45', isCompleted: false, isUnlocked: false },
+          { id: 'lesson8', title: 'Data Cleaning', type: 'video', duration: '27:20', isCompleted: false, isUnlocked: false },
+          { id: 'lesson9', title: 'Data Analysis Assignment', type: 'assignment', duration: '60:00', isCompleted: false, isUnlocked: false },
         ]
       }
     ]
@@ -114,9 +115,82 @@ const CourseDetails = () => {
   const { courseId } = useParams<{ courseId: string }>();
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [isEnrolled, setIsEnrolled] = useState(false);
+  const [courseData, setCourseData] = useState(null);
+  const [moduleProgress, setModuleProgress] = useState({});
   
-  if (!courseId || !mockCourseData[courseId as keyof typeof mockCourseData]) {
+  useEffect(() => {
+    // Check if the user is already enrolled
+    const enrollments = JSON.parse(localStorage.getItem('enrollments') || '[]');
+    const userEnrolled = user && enrollments.some(
+      e => e.userId === user.id && e.courseId === courseId
+    );
+    
+    setIsEnrolled(userEnrolled);
+    
+    // Load course data
+    if (courseId && mockCourseData[courseId]) {
+      const course = JSON.parse(JSON.stringify(mockCourseData[courseId])); // Deep copy
+      
+      // If enrolled, check progress from localStorage
+      if (userEnrolled && user) {
+        const progress = JSON.parse(localStorage.getItem(`course_${courseId}_progress_${user.id}`) || '{}');
+        
+        // Apply saved progress to the course data
+        course.modules.forEach((module, mIndex) => {
+          module.lessons.forEach((lesson, lIndex) => {
+            if (progress[lesson.id]) {
+              course.modules[mIndex].lessons[lIndex].isCompleted = progress[lesson.id].completed;
+              course.modules[mIndex].lessons[lIndex].isUnlocked = true;
+            } else if (mIndex === 0 || isFirstLessonOfModule(course, mIndex, lIndex)) {
+              // First module's lessons or first lesson of each module is unlocked by default
+              course.modules[mIndex].lessons[lIndex].isUnlocked = true;
+            } else {
+              // Check if previous lesson is completed
+              const prevLesson = getPreviousLesson(course, mIndex, lIndex);
+              course.modules[mIndex].lessons[lIndex].isUnlocked = prevLesson ? prevLesson.isCompleted : false;
+            }
+          });
+        });
+      }
+      
+      setCourseData(course);
+      
+      // Calculate module progress
+      const moduleProg = {};
+      course.modules.forEach(module => {
+        const totalLessons = module.lessons.length;
+        const completedLessons = module.lessons.filter(l => l.isCompleted).length;
+        moduleProg[module.id] = {
+          percentage: totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0,
+          completed: completedLessons,
+          total: totalLessons
+        };
+      });
+      setModuleProgress(moduleProg);
+    }
+  }, [courseId, user]);
+  
+  // Helper to get previous lesson
+  const getPreviousLesson = (course, moduleIndex, lessonIndex) => {
+    if (lessonIndex > 0) {
+      // Previous lesson in same module
+      return course.modules[moduleIndex].lessons[lessonIndex - 1];
+    } else if (moduleIndex > 0) {
+      // Last lesson of previous module
+      const prevModule = course.modules[moduleIndex - 1];
+      return prevModule.lessons[prevModule.lessons.length - 1];
+    }
+    return null;
+  };
+  
+  // Helper to check if it's the first lesson of a module
+  const isFirstLessonOfModule = (course, moduleIndex, lessonIndex) => {
+    return lessonIndex === 0;
+  };
+  
+  if (!courseId || !courseData) {
     return (
       <div className="min-h-screen flex flex-col">
         <Navigation />
@@ -134,22 +208,125 @@ const CourseDetails = () => {
     );
   }
 
-  const course = mockCourseData[courseId as keyof typeof mockCourseData];
+  const course = courseData;
   
-  // Calculate progress
+  // Calculate overall progress
   const totalLessons = course.modules.reduce((total, module) => total + module.lessons.length, 0);
   const completedLessons = course.modules.reduce((total, module) => {
     return total + module.lessons.filter(lesson => lesson.isCompleted).length;
   }, 0);
   
   const progressPercentage = Math.round((completedLessons / totalLessons) * 100);
+  
+  // Check if all lessons are completed to show certificate
+  const allLessonsCompleted = progressPercentage === 100;
 
   const handleEnroll = () => {
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please login to enroll in this course",
+        variant: "destructive"
+      });
+      navigate("/login");
+      return;
+    }
+    
+    // Save enrollment to localStorage
+    const enrollments = JSON.parse(localStorage.getItem('enrollments') || '[]');
+    enrollments.push({
+      id: `enrollment_${Date.now()}`,
+      userId: user.id,
+      courseId: course.id,
+      enrolledAt: new Date().toISOString(),
+      completedAt: null,
+      progress: 0,
+      lastAccessedAt: new Date().toISOString()
+    });
+    localStorage.setItem('enrollments', JSON.stringify(enrollments));
+    
+    // Initialize progress tracking
+    localStorage.setItem(`course_${course.id}_progress_${user.id}`, JSON.stringify({}));
+    
     setIsEnrolled(true);
     toast({
       title: "Successfully Enrolled",
       description: `You have enrolled in "${course.title}"`,
     });
+    
+    // Update course data to unlock first module
+    const updatedCourse = {...course};
+    updatedCourse.modules[0].lessons.forEach((lesson, index) => {
+      updatedCourse.modules[0].lessons[index].isUnlocked = true;
+    });
+    setCourseData(updatedCourse);
+  };
+  
+  const handleLessonComplete = (moduleIndex, lessonIndex) => {
+    if (!isEnrolled || !user) return;
+    
+    // Mark the lesson as completed
+    const updatedCourse = {...course};
+    updatedCourse.modules[moduleIndex].lessons[lessonIndex].isCompleted = true;
+    
+    // Unlock the next lesson if available
+    if (lessonIndex < updatedCourse.modules[moduleIndex].lessons.length - 1) {
+      // Next lesson in the same module
+      updatedCourse.modules[moduleIndex].lessons[lessonIndex + 1].isUnlocked = true;
+    } else if (moduleIndex < updatedCourse.modules.length - 1) {
+      // First lesson of the next module
+      updatedCourse.modules[moduleIndex + 1].lessons[0].isUnlocked = true;
+    }
+    
+    setCourseData(updatedCourse);
+    
+    // Save progress to localStorage
+    if (user) {
+      const lessonId = updatedCourse.modules[moduleIndex].lessons[lessonIndex].id;
+      const progress = JSON.parse(localStorage.getItem(`course_${course.id}_progress_${user.id}`) || '{}');
+      progress[lessonId] = { completed: true, completedAt: new Date().toISOString() };
+      localStorage.setItem(`course_${course.id}_progress_${user.id}`, JSON.stringify(progress));
+      
+      // Update module progress
+      const moduleProg = {...moduleProgress};
+      const moduleId = updatedCourse.modules[moduleIndex].id;
+      const totalLessons = updatedCourse.modules[moduleIndex].lessons.length;
+      const completedLessons = updatedCourse.modules[moduleIndex].lessons.filter(l => l.isCompleted).length;
+      moduleProg[moduleId] = {
+        percentage: Math.round((completedLessons / totalLessons) * 100),
+        completed: completedLessons,
+        total: totalLessons
+      };
+      setModuleProgress(moduleProg);
+      
+      // If all lessons are completed, generate certificate
+      const newTotalCompleted = updatedCourse.modules.reduce(
+        (total, module) => total + module.lessons.filter(lesson => lesson.isCompleted).length, 0
+      );
+      
+      if (newTotalCompleted === totalLessons) {
+        // All lessons completed, generate certificate
+        const certificates = JSON.parse(localStorage.getItem('certificates') || '[]');
+        const existingCert = certificates.find(cert => cert.userId === user.id && cert.courseId === course.id);
+        
+        if (!existingCert) {
+          certificates.push({
+            id: `cert_${Date.now()}`,
+            userId: user.id,
+            courseId: course.id,
+            issuedAt: new Date().toISOString(),
+            completionDate: new Date().toISOString(),
+            courseTitle: course.title
+          });
+          localStorage.setItem('certificates', JSON.stringify(certificates));
+          
+          toast({
+            title: "Congratulations!",
+            description: "You have completed the course! Your certificate is now available.",
+          });
+        }
+      }
+    }
   };
 
   const lessonTypeIcon = (type: string) => {
@@ -165,6 +342,41 @@ const CourseDetails = () => {
       default:
         return <FileText size={18} />;
     }
+  };
+  
+  const handleStartLesson = (moduleIndex, lessonIndex) => {
+    if (!isEnrolled) {
+      toast({
+        title: "Enrollment Required",
+        description: "Please enroll in this course to access the lessons",
+      });
+      return;
+    }
+    
+    const lesson = course.modules[moduleIndex].lessons[lessonIndex];
+    
+    if (!lesson.isUnlocked) {
+      toast({
+        title: "Lesson Locked",
+        description: "Complete the previous lessons to unlock this content",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Navigate to the appropriate lesson page
+    navigate(`/${lesson.type}/${lesson.id}`, {
+      state: { 
+        courseId: course.id,
+        moduleIndex,
+        lessonIndex,
+        onComplete: () => handleLessonComplete(moduleIndex, lessonIndex)
+      }
+    });
+  };
+  
+  const handleViewCertificate = () => {
+    navigate(`/certificates?courseId=${course.id}`);
   };
 
   return (
@@ -232,29 +444,39 @@ const CourseDetails = () => {
                                 <div className="flex justify-between items-center">
                                   <h3>Module {moduleIndex + 1}: {module.title}</h3>
                                   <span className="text-sm text-gray-500">
-                                    {module.lessons.filter(l => l.isCompleted).length}/{module.lessons.length} completed
+                                    {moduleProgress[module.id]?.completed}/{moduleProgress[module.id]?.total} completed
                                   </span>
                                 </div>
                                 <p className="text-sm text-gray-600 mt-1">{module.description}</p>
+                                <div className="mt-2">
+                                  <Progress 
+                                    value={moduleProgress[module.id]?.percentage || 0} 
+                                    className="h-1.5" 
+                                  />
+                                </div>
                               </div>
                               <CardContent className="p-0">
                                 <ul className="divide-y">
-                                  {module.lessons.map((lesson) => (
+                                  {module.lessons.map((lesson, lessonIndex) => (
                                     <li key={lesson.id} className="p-4 hover:bg-gray-50">
-                                      <Link 
-                                        to={`/${lesson.type}/${lesson.id}`} 
-                                        className="flex items-center justify-between"
+                                      <div 
+                                        className="flex items-center justify-between cursor-pointer"
+                                        onClick={() => handleStartLesson(moduleIndex, lessonIndex)}
                                       >
                                         <div className="flex items-center gap-3">
-                                          <div className={`p-2 rounded-full ${lesson.isCompleted ? 'bg-green-100' : 'bg-gray-100'}`}>
+                                          <div className={`p-2 rounded-full ${lesson.isCompleted ? 'bg-green-100' : lesson.isUnlocked ? 'bg-gray-100' : 'bg-gray-100'}`}>
                                             {lesson.isCompleted ? (
                                               <Check size={16} className="text-green-600" />
-                                            ) : (
+                                            ) : lesson.isUnlocked ? (
                                               lessonTypeIcon(lesson.type)
+                                            ) : (
+                                              <Lock size={16} className="text-gray-400" />
                                             )}
                                           </div>
                                           <div>
-                                            <h4 className="font-medium">{lesson.title}</h4>
+                                            <h4 className={`font-medium ${!lesson.isUnlocked ? 'text-gray-500' : ''}`}>
+                                              {lesson.title}
+                                            </h4>
                                             <div className="flex items-center gap-2 text-sm text-gray-500">
                                               <span className="capitalize">{lesson.type}</span>
                                               <span>•</span>
@@ -262,10 +484,10 @@ const CourseDetails = () => {
                                             </div>
                                           </div>
                                         </div>
-                                        <Button variant="ghost" size="sm">
-                                          {lesson.isCompleted ? 'Review' : 'Start'}
+                                        <Button variant="ghost" size="sm" disabled={!lesson.isUnlocked}>
+                                          {lesson.isCompleted ? 'Review' : lesson.isUnlocked ? 'Start' : 'Locked'}
                                         </Button>
-                                      </Link>
+                                      </div>
                                     </li>
                                   ))}
                                 </ul>
@@ -273,6 +495,23 @@ const CourseDetails = () => {
                             </Card>
                           ))}
                         </div>
+                        
+                        {allLessonsCompleted && (
+                          <div className="bg-green-50 p-6 rounded-lg border border-green-200 text-center">
+                            <div className="mb-4">
+                              <Award size={64} className="mx-auto text-green-600" />
+                            </div>
+                            <h3 className="text-xl font-bold text-green-800 mb-2">
+                              Congratulations! You've completed this course
+                            </h3>
+                            <p className="mb-4 text-green-700">
+                              You've mastered all lessons and earned your certificate.
+                            </p>
+                            <Button onClick={handleViewCertificate} className="bg-green-600 hover:bg-green-700">
+                              View Certificate
+                            </Button>
+                          </div>
+                        )}
                       </>
                     ) : (
                       <div className="space-y-4">
@@ -482,7 +721,21 @@ const CourseDetails = () => {
                   
                   {isEnrolled ? (
                     <div className="space-y-4">
-                      <Button className="w-full">
+                      <Button className="w-full" onClick={() => {
+                        // Find the first unlocked lesson
+                        let targetModule = 0, targetLesson = 0;
+                        for (let m = 0; m < course.modules.length; m++) {
+                          for (let l = 0; l < course.modules[m].lessons.length; l++) {
+                            if (course.modules[m].lessons[l].isUnlocked && 
+                                !course.modules[m].lessons[l].isCompleted) {
+                              targetModule = m;
+                              targetLesson = l;
+                              break;
+                            }
+                          }
+                        }
+                        handleStartLesson(targetModule, targetLesson);
+                      }}>
                         Continue Learning
                       </Button>
                       <div className="border-t pt-4">
