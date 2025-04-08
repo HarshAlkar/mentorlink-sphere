@@ -1,6 +1,8 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/services/supabase';
+import { database } from '@/services/database';
 
 type User = {
   id: string;
@@ -38,43 +40,105 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const { toast } = useToast();
 
-  // Check for existing session on component mount
+  // Check for existing Supabase session on component mount
   useEffect(() => {
-    try {
-      const storedUser = localStorage.getItem('user');
-      if (storedUser) {
-        const parsedUser = JSON.parse(storedUser);
-        setUser(parsedUser);
-        setIsAuthenticated(true);
+    const checkSession = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
         
-        // Refresh user progress on login
-        refreshUserProgress(parsedUser);
+        if (error) {
+          console.error("Session error:", error);
+          return;
+        }
+        
+        if (session) {
+          // Get user data from our database
+          const dbUser = await database.getUserByEmail(session.user.email || '');
+          
+          if (dbUser) {
+            const currentUser: User = {
+              id: dbUser.id,
+              username: dbUser.name,
+              email: dbUser.email,
+              avatar: dbUser.profilePicture,
+              role: dbUser.role,
+              // Default preferences
+              preferences: {
+                theme: 'system',
+                notifications: true,
+                language: 'en'
+              }
+            };
+            
+            setUser(currentUser);
+            setIsAuthenticated(true);
+            
+            // Refresh user progress
+            refreshUserProgress(currentUser);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to check session:", error);
+        setUser(null);
+        setIsAuthenticated(false);
       }
-    } catch (error) {
-      console.error("Failed to parse user from localStorage:", error);
-      localStorage.removeItem('user');
-      setUser(null);
-      setIsAuthenticated(false);
-    }
+    };
+    
+    checkSession();
+    
+    // Set up auth state change listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (event === 'SIGNED_IN' && session) {
+          // Get user data from our database
+          const dbUser = await database.getUserByEmail(session.user.email || '');
+          
+          if (dbUser) {
+            const currentUser: User = {
+              id: dbUser.id,
+              username: dbUser.name,
+              email: dbUser.email,
+              avatar: dbUser.profilePicture,
+              role: dbUser.role,
+              preferences: {
+                theme: 'system',
+                notifications: true,
+                language: 'en'
+              }
+            };
+            
+            setUser(currentUser);
+            setIsAuthenticated(true);
+            
+            // Refresh user progress
+            refreshUserProgress(currentUser);
+          }
+        } else if (event === 'SIGNED_OUT') {
+          setUser(null);
+          setIsAuthenticated(false);
+        }
+      }
+    );
+    
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   // Calculate and update user progress
-  const refreshUserProgress = (currentUser: User | null = user) => {
+  const refreshUserProgress = async (currentUser: User | null = user) => {
     if (!currentUser) return;
     
     try {
-      // Get certificates earned
-      const certificates = JSON.parse(localStorage.getItem('certificates') || '[]');
-      const userCertificates = certificates.filter((cert: any) => cert.userId === currentUser.id);
-      
-      // Get enrollments
-      const enrollments = JSON.parse(localStorage.getItem('enrollments') || '[]');
-      const userEnrollments = enrollments.filter((enroll: any) => enroll.userId === currentUser.id);
+      // For demo purposes - in real implementation, this would query Supabase
+      const certificates = await fetchUserCertificates(currentUser.id);
+      const enrollments = await fetchUserEnrollments(currentUser.id);
       
       // Calculate points (100 per certificate + progress on incomplete courses)
-      let totalPoints = userCertificates.length * 100;
+      let totalPoints = certificates.length * 100;
+      let coursesCompleted = certificates.length;
       
-      userEnrollments.forEach((enrollment: any) => {
+      enrollments.forEach((enrollment: any) => {
         // Add points for progress
         const progress = enrollment.progress || 0;
         totalPoints += Math.floor(progress * 0.5); // 0.5 point per percent completed
@@ -84,141 +148,59 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const updatedUser = {
         ...currentUser,
         progress: {
-          coursesCompleted: userCertificates.length,
-          certificatesEarned: userCertificates.length,
+          coursesCompleted,
+          certificatesEarned: certificates.length,
           totalPoints
         }
       };
       
       setUser(updatedUser);
-      localStorage.setItem('user', JSON.stringify(updatedUser));
     } catch (error) {
       console.error("Error refreshing user progress:", error);
     }
   };
 
+  // Helper functions for demo data
+  const fetchUserCertificates = async (userId: string) => {
+    // In a real implementation, this would query the certificates table
+    return [];
+  };
+  
+  const fetchUserEnrollments = async (userId: string) => {
+    // In a real implementation, this would query the enrollments table
+    return [];
+  };
+
   // Login function
-  const login = async (username: string, password: string): Promise<boolean> => {
+  const login = async (email: string, password: string): Promise<boolean> => {
     try {
-      // For demo purposes, hardcoded credentials
-      if (username.toUpperCase() === 'HARSH' && password === '12345678') {
-        const newUser: User = {
-          id: '1',
-          username: 'HARSH',
-          email: 'harsh@example.com',
-          role: 'mentor_admin',
-          avatar: '/placeholder.svg',
-          preferences: {
-            theme: 'system',
-            notifications: true,
-            language: 'en'
-          },
-          progress: {
-            coursesCompleted: 5,
-            certificatesEarned: 5,
-            totalPoints: 750
-          }
-        };
-        
-        // Store user in localStorage
-        localStorage.setItem('user', JSON.stringify(newUser));
-        
-        // Update state
-        setUser(newUser);
-        setIsAuthenticated(true);
-        return true;
+      // For demo purposes, still support demo users
+      if (isDemoUser(email)) {
+        return handleDemoLogin(email, password);
       }
       
-      // Add demo users for different roles
-      const demoUsers: Record<string, {
-        password: string, 
-        role: User['role'], 
-        avatar?: string
-        progress?: {
-          coursesCompleted: number;
-          certificatesEarned: number;
-          totalPoints: number;
-        }
-      }> = {
-        'mentor': { 
-          password: '12345678', 
-          role: 'mentor', 
-          avatar: '/placeholder.svg',
-          progress: {
-            coursesCompleted: 12,
-            certificatesEarned: 8,
-            totalPoints: 1200
-          }
-        },
-        'teacher': { 
-          password: '12345678', 
-          role: 'teacher', 
-          avatar: '/placeholder.svg',
-          progress: {
-            coursesCompleted: 15,
-            certificatesEarned: 10,
-            totalPoints: 1500
-          }
-        },
-        'student': { 
-          password: '12345678', 
-          role: 'student', 
-          avatar: '/placeholder.svg',
-          progress: {
-            coursesCompleted: 3,
-            certificatesEarned: 2,
-            totalPoints: 350
-          }
-        },
-        'admin': { 
-          password: '12345678', 
-          role: 'admin', 
-          avatar: '/placeholder.svg',
-          progress: {
-            coursesCompleted: 20,
-            certificatesEarned: 18,
-            totalPoints: 2500
-          }
-        },
-      };
-      
-      // Case-insensitive username comparison
-      const lowerUsername = username.toLowerCase();
-      const demoUserKey = Object.keys(demoUsers).find(
-        key => key.toLowerCase() === lowerUsername
-      );
-      
-      if (demoUserKey && demoUsers[demoUserKey].password === password) {
-        const demoUserData = demoUsers[demoUserKey];
-        const role = demoUserData.role;
-        
-        const newUser: User = {
-          id: `user_${Date.now()}`,
-          username: username,
-          email: `${lowerUsername}@example.com`,
-          role: role,
-          avatar: demoUserData.avatar,
-          preferences: {
-            theme: 'system',
-            notifications: true,
-            language: 'en'
-          },
-          progress: demoUserData.progress
-        };
-        
-        localStorage.setItem('user', JSON.stringify(newUser));
-        setUser(newUser);
-        setIsAuthenticated(true);
-        return true;
-      }
-      
-      // Login failed
-      toast({
-        variant: "destructive",
-        title: "Login failed",
-        description: "Invalid username or password. Try using demo credentials (username: 'student', password: '12345678')."
+      // Real Supabase authentication
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
       });
-      return false;
+      
+      if (error) {
+        toast({
+          variant: "destructive",
+          title: "Login failed",
+          description: error.message || "Invalid email or password."
+        });
+        return false;
+      }
+      
+      // Successfully authenticated with Supabase
+      toast({
+        title: "Login successful",
+        description: "Welcome back!"
+      });
+      
+      return true;
     } catch (error) {
       console.error("Login error:", error);
       toast({
@@ -230,10 +212,56 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Helper for demo users during transition to Supabase
+  const isDemoUser = (username: string): boolean => {
+    const demoUsers = ['mentor', 'teacher', 'student', 'admin', 'HARSH'];
+    return demoUsers.includes(username.toUpperCase());
+  };
+  
+  const handleDemoLogin = (username: string, password: string): boolean => {
+    if (password !== '12345678') return false;
+    
+    // Case-insensitive username comparison
+    const lowerUsername = username.toLowerCase();
+    let role: User['role'] = 'student';
+    
+    if (lowerUsername === 'mentor') role = 'mentor';
+    else if (lowerUsername === 'teacher') role = 'teacher';
+    else if (lowerUsername === 'admin') role = 'admin';
+    else if (username.toUpperCase() === 'HARSH') role = 'mentor_admin';
+    
+    const newUser: User = {
+      id: `user_${Date.now()}`,
+      username: username,
+      email: `${lowerUsername}@example.com`,
+      role: role,
+      avatar: '/placeholder.svg',
+      preferences: {
+        theme: 'system',
+        notifications: true,
+        language: 'en'
+      },
+      progress: {
+        coursesCompleted: role === 'student' ? 3 : (role === 'mentor' ? 12 : 15),
+        certificatesEarned: role === 'student' ? 2 : (role === 'mentor' ? 8 : 10),
+        totalPoints: role === 'student' ? 350 : (role === 'mentor' ? 1200 : 1500)
+      }
+    };
+    
+    setUser(newUser);
+    setIsAuthenticated(true);
+    return true;
+  };
+
   // Logout function
-  const logout = () => {
+  const logout = async () => {
     try {
-      localStorage.removeItem('user');
+      // Sign out from Supabase
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) throw error;
+      
+      // Clean up local state
       setUser(null);
       setIsAuthenticated(false);
       
@@ -243,6 +271,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
     } catch (error) {
       console.error("Logout error:", error);
+      toast({
+        variant: "destructive",
+        title: "Logout error",
+        description: "An error occurred during logout."
+      });
     }
   };
 
@@ -254,15 +287,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     role: string = 'student',
     avatar?: string
   ): Promise<boolean> => {
-    // In a real app, you would make an API call to register the user
-    // For this demo, we'll simulate a successful registration
     try {
+      // First register with Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+      });
+      
+      if (authError) throw authError;
+      
+      // Next, create the user in our users table with additional info
       const validRole = ['student', 'mentor', 'admin', 'teacher', 'mentor_admin'].includes(role) 
         ? role as User['role'] 
         : 'student';
-        
+      
+      // In a real implementation, we would create the user in our database
+      // For demo, simulate successful registration
       const newUser: User = {
-        id: `user_${Date.now()}`,
+        id: authData.user?.id || `user_${Date.now()}`,
         username,
         email,
         role: validRole,
@@ -279,7 +321,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       };
       
-      localStorage.setItem('user', JSON.stringify(newUser));
       setUser(newUser);
       setIsAuthenticated(true);
       
@@ -289,68 +330,67 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
       
       return true;
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error during registration:", error);
       toast({
         variant: "destructive",
         title: "Registration failed",
-        description: "An error occurred during registration. Please try again."
+        description: error.message || "An error occurred during registration. Please try again."
       });
       return false;
     }
   };
 
   // Update user profile
-  const updateUserProfile = (updates: Partial<User>) => {
-    if (user) {
-      try {
-        const updatedUser = { ...user, ...updates };
-        
-        localStorage.setItem('user', JSON.stringify(updatedUser));
-        setUser(updatedUser);
-        
-        toast({
-          title: "Profile updated",
-          description: "Your profile has been updated successfully."
-        });
-      } catch (error) {
-        console.error("Error updating user profile:", error);
-        toast({
-          variant: "destructive",
-          title: "Update failed",
-          description: "Failed to update your profile. Please try again."
-        });
-      }
+  const updateUserProfile = async (updates: Partial<User>) => {
+    if (!user) return;
+    
+    try {
+      // In a real implementation, update the user in the database
+      const updatedUser = { ...user, ...updates };
+      
+      setUser(updatedUser);
+      
+      toast({
+        title: "Profile updated",
+        description: "Your profile has been updated successfully."
+      });
+    } catch (error) {
+      console.error("Error updating user profile:", error);
+      toast({
+        variant: "destructive",
+        title: "Update failed",
+        description: "Failed to update your profile. Please try again."
+      });
     }
   };
 
   // Update user preferences
-  const updateUserPreferences = (preferences: Partial<User['preferences']>) => {
-    if (user) {
-      try {
-        const updatedUser = { 
-          ...user, 
-          preferences: { 
-            ...(user.preferences || {}), 
-            ...preferences 
-          } 
-        };
-        
-        localStorage.setItem('user', JSON.stringify(updatedUser));
-        setUser(updatedUser);
-        
-        toast({
-          title: "Preferences updated",
-          description: "Your preferences have been updated successfully."
-        });
-      } catch (error) {
-        console.error("Error updating user preferences:", error);
-        toast({
-          variant: "destructive",
-          title: "Update failed",
-          description: "Failed to update your preferences. Please try again."
-        });
-      }
+  const updateUserPreferences = async (preferences: Partial<User['preferences']>) => {
+    if (!user) return;
+    
+    try {
+      const updatedUser = { 
+        ...user, 
+        preferences: { 
+          ...(user.preferences || {}), 
+          ...preferences 
+        } 
+      };
+      
+      setUser(updatedUser);
+      
+      toast({
+        title: "Preferences updated",
+        description: "Your preferences have been updated successfully."
+      });
+    } catch (error) {
+      console.error("Error updating user preferences:", error);
+      toast({
+        variant: "destructive",
+        title: "Update failed",
+        description: "Failed to update your preferences. Please try again."
+      });
     }
   };
 

@@ -15,7 +15,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 
 const formSchema = z.object({
-  username: z.string().min(1, "Username is required"),
+  email: z.string().email("Please enter a valid email address"),
   password: z.string().min(8, "Password must be at least 8 characters"),
 });
 
@@ -41,7 +41,7 @@ const Login = () => {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      username: "",
+      email: "",
       password: "",
     },
   });
@@ -51,7 +51,7 @@ const Login = () => {
     setIsLoading(true);
     
     try {
-      const success = await login(values.username, values.password);
+      const success = await login(values.email, values.password);
       
       if (success) {
         toast({
@@ -60,7 +60,7 @@ const Login = () => {
         });
         navigate(from);
       } else {
-        setError("Invalid username or password. Try using demo credentials like username: 'student' or 'mentor' with password: '12345678'");
+        setError("Invalid email or password. Try using demo credentials like email: 'student' or 'mentor' with password: '12345678'");
       }
     } catch (error) {
       console.error("Login error:", error);
@@ -119,12 +119,12 @@ const Login = () => {
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                 <FormField
                   control={form.control}
-                  name="username"
+                  name="email"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Username</FormLabel>
+                      <FormLabel>Email</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter your username" {...field} />
+                        <Input placeholder="Enter your email" type="email" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

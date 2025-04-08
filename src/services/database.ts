@@ -1,3 +1,4 @@
+
 // Types for our database entities
 export interface Message {
   id: string;
@@ -80,254 +81,180 @@ export interface Certificate {
   id: string;
   userId: string;
   courseId: string;
-  issuedAt: string; // Changed from Date to string to match how we're using it
-  completionDate: string; // Changed from Date to string to match how we're using it
+  issuedAt: string; 
+  completionDate: string;
 }
 
-// In-memory database (this would be a real database in production)
-class InMemoryDatabase {
-  private sessions: Session[] = [];
-  private messages: Message[] = [];
-  private users: User[] = [];
-  private courses: Course[] = [];
-  private enrollments: Enrollment[] = [];
-  private certificates: Certificate[] = [];
+// Import Supabase client and types
+import { supabase, DbUser, DbSession, DbMessage, DbCourse, DbCourseModule, DbLesson, DbEnrollment, DbCertificate } from './supabase';
 
-  constructor() {
-    // Initialize with some demo data
-    this.initializeDemoData();
-  }
-
-  private initializeDemoData() {
-    // Add a few demo users
-    this.users = [
-      {
-        id: 'user_1',
-        name: 'John Doe',
-        email: 'john@example.com',
-        role: 'student',
-        joinDate: new Date('2023-01-15')
-      },
-      {
-        id: 'user_2',
-        name: 'Sarah Johnson',
-        email: 'sarah@example.com',
-        role: 'mentor',
-        expertise: ['Web Development', 'React', 'JavaScript'],
-        bio: 'Senior Web Developer with 10+ years experience',
-        joinDate: new Date('2022-11-05')
-      },
-      {
-        id: 'user_3',
-        name: 'Admin User',
-        email: 'admin@example.com',
-        role: 'admin',
-        joinDate: new Date('2022-05-10')
-      }
-    ];
-  }
-
+// Database service using Supabase
+class SupabaseDatabase {
   // User methods
-  createUser(user: Omit<User, 'id'>): User {
-    const id = `user_${Date.now()}`;
-    const newUser: User = { ...user, id };
-    this.users.push(newUser);
-    return newUser;
+  async createUser(user: Omit<User, 'id'>): Promise<User | undefined> {
+    try {
+      const { data, error } = await supabase.from('users').insert({
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        profile_picture: user.profilePicture,
+        bio: user.bio,
+        expertise: user.expertise,
+        join_date: user.joinDate.toISOString(),
+      }).select().single();
+      
+      if (error) throw error;
+      
+      return this.mapDbUserToUser(data as DbUser);
+    } catch (error) {
+      console.error('Error creating user:', error);
+      return undefined;
+    }
   }
 
-  getUser(id: string): User | undefined {
-    return this.users.find(user => user.id === id);
+  async getUser(id: string): Promise<User | undefined> {
+    try {
+      const { data, error } = await supabase.from('users').select('*').eq('id', id).single();
+      
+      if (error) throw error;
+      
+      return this.mapDbUserToUser(data as DbUser);
+    } catch (error) {
+      console.error('Error getting user:', error);
+      return undefined;
+    }
   }
 
-  getUserByEmail(email: string): User | undefined {
-    return this.users.find(user => user.email === email);
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    try {
+      const { data, error } = await supabase.from('users').select('*').eq('email', email).single();
+      
+      if (error) throw error;
+      
+      return this.mapDbUserToUser(data as DbUser);
+    } catch (error) {
+      console.error('Error getting user by email:', error);
+      return undefined;
+    }
   }
 
-  updateUser(id: string, updates: Partial<User>): User | undefined {
-    const userIndex = this.users.findIndex(user => user.id === id);
-    if (userIndex === -1) return undefined;
-    
-    this.users[userIndex] = { ...this.users[userIndex], ...updates };
-    return this.users[userIndex];
+  async updateUser(id: string, updates: Partial<User>): Promise<User | undefined> {
+    try {
+      const updateData: any = {};
+      
+      if (updates.name) updateData.name = updates.name;
+      if (updates.email) updateData.email = updates.email;
+      if (updates.role) updateData.role = updates.role;
+      if (updates.profilePicture) updateData.profile_picture = updates.profilePicture;
+      if (updates.bio) updateData.bio = updates.bio;
+      if (updates.expertise) updateData.expertise = updates.expertise;
+      
+      const { data, error } = await supabase
+        .from('users')
+        .update(updateData)
+        .eq('id', id)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      return this.mapDbUserToUser(data as DbUser);
+    } catch (error) {
+      console.error('Error updating user:', error);
+      return undefined;
+    }
   }
 
   // Session methods
-  createSession(session: Omit<Session, 'id' | 'messages'>): Session {
-    const id = `session_${Date.now()}`;
-    const newSession: Session = { 
-      ...session, 
-      id, 
-      messages: []
-    };
-    this.sessions.push(newSession);
-    return newSession;
-  }
-
-  getSession(id: string): Session | undefined {
-    return this.sessions.find(session => session.id === id);
-  }
-
-  updateSession(id: string, updates: Partial<Session>): Session | undefined {
-    const sessionIndex = this.sessions.findIndex(session => session.id === id);
-    if (sessionIndex === -1) return undefined;
-    
-    this.sessions[sessionIndex] = { ...this.sessions[sessionIndex], ...updates };
-    return this.sessions[sessionIndex];
-  }
-
-  listSessionsByMentor(mentorId: string): Session[] {
-    return this.sessions.filter(session => session.mentorId === mentorId);
-  }
-
-  listSessionsByStudent(studentId: string): Session[] {
-    return this.sessions.filter(session => session.studentId === studentId);
-  }
-
-  // Message methods
-  addMessage(message: Omit<Message, 'id'>): Message {
-    const id = `msg_${Date.now()}`;
-    const newMessage: Message = { ...message, id };
-    this.messages.push(newMessage);
-    
-    // Add reference to session
-    const session = this.getSession(message.sessionId);
-    if (session) {
-      session.messages.push(newMessage);
-    }
-    
-    return newMessage;
-  }
-
-  getSessionMessages(sessionId: string): Message[] {
-    return this.messages.filter(message => message.sessionId === sessionId);
-  }
-
-  // Course methods
-  createCourse(course: Omit<Course, 'id'>): Course {
-    const id = `course_${Date.now()}`;
-    const newCourse: Course = { ...course, id };
-    this.courses.push(newCourse);
-    return newCourse;
-  }
-
-  getCourse(id: string): Course | undefined {
-    return this.courses.find(course => course.id === id);
-  }
-
-  updateCourse(id: string, updates: Partial<Course>): Course | undefined {
-    const courseIndex = this.courses.findIndex(course => course.id === id);
-    if (courseIndex === -1) return undefined;
-    
-    this.courses[courseIndex] = { ...this.courses[courseIndex], ...updates };
-    return this.courses[courseIndex];
-  }
-
-  deleteCourse(id: string): boolean {
-    const initialLength = this.courses.length;
-    this.courses = this.courses.filter(course => course.id !== id);
-    return this.courses.length < initialLength;
-  }
-
-  listCourses(filters?: { 
-    category?: string, 
-    instructorId?: string,
-    search?: string
-  }): Course[] {
-    let result = [...this.courses];
-    
-    if (filters) {
-      if (filters.category) {
-        result = result.filter(course => course.category === filters.category);
-      }
+  async createSession(session: Omit<Session, 'id' | 'messages'>): Promise<Session | undefined> {
+    try {
+      const { data, error } = await supabase.from('sessions').insert({
+        mentor_id: session.mentorId,
+        student_id: session.studentId,
+        start_time: session.startTime.toISOString(),
+        end_time: session.endTime?.toISOString() || null,
+        status: session.status,
+        title: session.title,
+        description: session.description,
+      }).select().single();
       
-      if (filters.instructorId) {
-        result = result.filter(course => course.instructorId === filters.instructorId);
-      }
+      if (error) throw error;
       
-      if (filters.search) {
-        const searchLower = filters.search.toLowerCase();
-        result = result.filter(course => 
-          course.title.toLowerCase().includes(searchLower) || 
-          course.description.toLowerCase().includes(searchLower)
-        );
-      }
+      return this.mapDbSessionToSession(data as DbSession);
+    } catch (error) {
+      console.error('Error creating session:', error);
+      return undefined;
     }
-    
-    return result;
   }
 
-  // Enrollment methods
-  enrollUserInCourse(userId: string, courseId: string): Enrollment {
-    const id = `enroll_${Date.now()}`;
-    const enrollment: Enrollment = {
-      id,
-      userId,
-      courseId,
-      enrolledAt: new Date(),
-      completedAt: null,
-      progress: 0,
-      lastAccessedAt: new Date()
-    };
-    
-    this.enrollments.push(enrollment);
-    
-    // Update course enrollment count
-    const course = this.getCourse(courseId);
-    if (course) {
-      course.studentsEnrolled++;
-    }
-    
-    return enrollment;
-  }
-
-  getUserEnrollments(userId: string): Enrollment[] {
-    return this.enrollments.filter(enrollment => enrollment.userId === userId);
-  }
-
-  updateEnrollmentProgress(id: string, progress: number): Enrollment | undefined {
-    const enrollmentIndex = this.enrollments.findIndex(enrollment => enrollment.id === id);
-    if (enrollmentIndex === -1) return undefined;
-    
-    this.enrollments[enrollmentIndex].progress = progress;
-    this.enrollments[enrollmentIndex].lastAccessedAt = new Date();
-    
-    // If progress is 100%, mark as completed
-    if (progress === 100) {
-      this.enrollments[enrollmentIndex].completedAt = new Date();
+  async getSession(id: string): Promise<Session | undefined> {
+    try {
+      const { data: sessionData, error: sessionError } = await supabase
+        .from('sessions')
+        .select('*')
+        .eq('id', id)
+        .single();
       
-      // Generate certificate
-      this.generateCertificate(
-        this.enrollments[enrollmentIndex].userId,
-        this.enrollments[enrollmentIndex].courseId
-      );
+      if (sessionError) throw sessionError;
+      
+      // Get messages for this session
+      const { data: messagesData, error: messagesError } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('session_id', id);
+      
+      if (messagesError) throw messagesError;
+      
+      const session = this.mapDbSessionToSession(sessionData as DbSession);
+      session.messages = (messagesData as DbMessage[]).map(dbMsg => this.mapDbMessageToMessage(dbMsg));
+      
+      return session;
+    } catch (error) {
+      console.error('Error getting session:', error);
+      return undefined;
     }
-    
-    return this.enrollments[enrollmentIndex];
   }
 
-  // Certificate methods
-  generateCertificate(userId: string, courseId: string): Certificate {
-    const id = `cert_${Date.now()}`;
-    const certificate: Certificate = {
-      id,
-      userId,
-      courseId,
-      issuedAt: new Date().toISOString(),
-      completionDate: new Date().toISOString()
+  // Helper methods to map DB types to our interface types
+  private mapDbUserToUser(dbUser: DbUser): User {
+    return {
+      id: dbUser.id,
+      name: dbUser.name,
+      email: dbUser.email,
+      role: dbUser.role,
+      profilePicture: dbUser.profile_picture,
+      bio: dbUser.bio,
+      expertise: dbUser.expertise,
+      joinDate: new Date(dbUser.join_date),
     };
-    
-    this.certificates.push(certificate);
-    return certificate;
   }
 
-  getUserCertificates(userId: string): Certificate[] {
-    return this.certificates.filter(cert => cert.userId === userId);
+  private mapDbSessionToSession(dbSession: DbSession): Session {
+    return {
+      id: dbSession.id,
+      mentorId: dbSession.mentor_id,
+      studentId: dbSession.student_id,
+      startTime: new Date(dbSession.start_time),
+      endTime: dbSession.end_time ? new Date(dbSession.end_time) : null,
+      status: dbSession.status,
+      messages: [],
+      title: dbSession.title,
+      description: dbSession.description,
+    };
   }
 
-  verifyCertificate(certificateId: string): Certificate | undefined {
-    return this.certificates.find(cert => cert.id === certificateId);
+  private mapDbMessageToMessage(dbMessage: DbMessage): Message {
+    return {
+      id: dbMessage.id,
+      sessionId: dbMessage.session_id,
+      sender: dbMessage.sender,
+      text: dbMessage.text,
+      timestamp: new Date(dbMessage.timestamp),
+    };
   }
+
+  // Add more methods as needed for other entities...
 }
 
 // Export singleton instance
-export const database = new InMemoryDatabase();
+export const database = new SupabaseDatabase();
