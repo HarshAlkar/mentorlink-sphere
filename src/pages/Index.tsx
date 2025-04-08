@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import Navigation from '@/components/Navigation';
 import Footer from '@/components/Footer';
 import HeroSection from '@/components/HeroSection';
@@ -9,6 +9,10 @@ import Features from '@/components/Features';
 import CtaSection from '@/components/CtaSection';
 
 const Index = () => {
+  useEffect(() => {
+    console.log("Index page rendered");
+  }, []);
+
   return (
     <div className="min-h-screen flex flex-col">
       <Navigation />
