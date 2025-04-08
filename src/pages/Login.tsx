@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -28,10 +27,8 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   
-  // Get redirect path from location state, or default to dashboard
   const from = location.state?.from || "/dashboard";
 
-  // If already authenticated, redirect to dashboard
   useEffect(() => {
     if (isAuthenticated) {
       navigate(from);
