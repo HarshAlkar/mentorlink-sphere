@@ -1,4 +1,3 @@
-
 // Types for our database entities
 export interface Message {
   id: string;
@@ -24,7 +23,7 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  role: 'student' | 'mentor' | 'teacher' | 'admin';
+  role: 'student' | 'mentor' | 'teacher' | 'admin' | 'mentor_admin';
   profilePicture?: string;
   bio?: string;
   expertise?: string[];
@@ -212,6 +211,40 @@ class SupabaseDatabase {
     } catch (error) {
       console.error('Error getting session:', error);
       return undefined;
+    }
+  }
+
+  async listSessionsByMentor(mentorId: string): Promise<Session[]> {
+    try {
+      const { data: sessionData, error: sessionError } = await supabase
+        .from('sessions')
+        .select('*')
+        .eq('mentor_id', mentorId);
+      
+      if (sessionError) throw sessionError;
+      
+      // Map the DB sessions to our interface type
+      const sessions: Session[] = [];
+      
+      for (const dbSession of (sessionData as DbSession[])) {
+        // Get messages for this session
+        const { data: messagesData, error: messagesError } = await supabase
+          .from('messages')
+          .select('*')
+          .eq('session_id', dbSession.id);
+        
+        if (messagesError) throw messagesError;
+        
+        const session = this.mapDbSessionToSession(dbSession);
+        session.messages = (messagesData as DbMessage[]).map(dbMsg => this.mapDbMessageToMessage(dbMsg));
+        
+        sessions.push(session);
+      }
+      
+      return sessions;
+    } catch (error) {
+      console.error('Error listing sessions by mentor:', error);
+      return [];
     }
   }
 

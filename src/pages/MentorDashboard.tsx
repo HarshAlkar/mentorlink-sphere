@@ -1,4 +1,3 @@
-
 import React from 'react';
 import Navigation from '@/components/Navigation';
 import Footer from '@/components/Footer';
@@ -18,13 +17,15 @@ const MentorDashboard = () => {
 
   React.useEffect(() => {
     if (isAuthenticated && user) {
-      // In a real app, this would be a database query to fetch mentor's sessions
-      const mentorSessions = database.listSessionsByMentor(user.id);
-      setSessions(mentorSessions);
+      const fetchSessions = async () => {
+        const mentorSessions = await database.listSessionsByMentor(user.id);
+        setSessions(mentorSessions);
+        
+        const studentIds = Array.from(new Set(mentorSessions.map(session => session.studentId)));
+        setActiveStudents(studentIds);
+      };
       
-      // Get unique student IDs
-      const studentIds = [...new Set(mentorSessions.map(session => session.studentId))];
-      setActiveStudents(studentIds);
+      fetchSessions();
     }
   }, [isAuthenticated, user]);
 
@@ -35,7 +36,7 @@ const MentorDashboard = () => {
     });
   };
 
-  if (!isAuthenticated || user?.role !== 'mentor') {
+  if (!isAuthenticated || !user || !['mentor', 'mentor_admin'].includes(user.role)) {
     return (
       <div className="min-h-screen flex flex-col">
         <Navigation />
