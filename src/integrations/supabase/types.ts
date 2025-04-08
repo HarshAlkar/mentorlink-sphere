@@ -9,7 +9,104 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      messages: {
+        Row: {
+          id: string
+          sender: string
+          session_id: string
+          text: string
+          timestamp: string
+        }
+        Insert: {
+          id?: string
+          sender: string
+          session_id: string
+          text: string
+          timestamp?: string
+        }
+        Update: {
+          id?: string
+          sender?: string
+          session_id?: string
+          text?: string
+          timestamp?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sessions: {
+        Row: {
+          description: string | null
+          end_time: string | null
+          id: string
+          mentor_id: string
+          start_time: string
+          status: string
+          student_id: string
+          title: string | null
+        }
+        Insert: {
+          description?: string | null
+          end_time?: string | null
+          id?: string
+          mentor_id: string
+          start_time: string
+          status: string
+          student_id: string
+          title?: string | null
+        }
+        Update: {
+          description?: string | null
+          end_time?: string | null
+          id?: string
+          mentor_id?: string
+          start_time?: string
+          status?: string
+          student_id?: string
+          title?: string | null
+        }
+        Relationships: []
+      }
+      users: {
+        Row: {
+          bio: string | null
+          email: string
+          expertise: string[] | null
+          id: string
+          join_date: string
+          name: string
+          profile_picture: string | null
+          role: string
+        }
+        Insert: {
+          bio?: string | null
+          email: string
+          expertise?: string[] | null
+          id?: string
+          join_date?: string
+          name: string
+          profile_picture?: string | null
+          role: string
+        }
+        Update: {
+          bio?: string | null
+          email?: string
+          expertise?: string[] | null
+          id?: string
+          join_date?: string
+          name?: string
+          profile_picture?: string | null
+          role?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

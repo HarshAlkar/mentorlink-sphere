@@ -1,8 +1,8 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/services/supabase';
 import { database } from '@/services/database';
+import { User as DbUserType } from './types';
 
 type User = {
   id: string;
@@ -40,7 +40,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const { toast } = useToast();
 
-  // Check for existing Supabase session on component mount
   useEffect(() => {
     const checkSession = async () => {
       try {
@@ -52,7 +51,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
         
         if (session) {
-          // Get user data from our database
           const dbUser = await database.getUserByEmail(session.user.email || '');
           
           if (dbUser) {
@@ -62,7 +60,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               email: dbUser.email,
               avatar: dbUser.profilePicture,
               role: dbUser.role,
-              // Default preferences
               preferences: {
                 theme: 'system',
                 notifications: true,
@@ -73,7 +70,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setUser(currentUser);
             setIsAuthenticated(true);
             
-            // Refresh user progress
             refreshUserProgress(currentUser);
           }
         }
@@ -86,11 +82,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     checkSession();
     
-    // Set up auth state change listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (event === 'SIGNED_IN' && session) {
-          // Get user data from our database
           const dbUser = await database.getUserByEmail(session.user.email || '');
           
           if (dbUser) {
@@ -110,7 +104,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setUser(currentUser);
             setIsAuthenticated(true);
             
-            // Refresh user progress
             refreshUserProgress(currentUser);
           }
         } else if (event === 'SIGNED_OUT') {
@@ -125,26 +118,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
-  // Calculate and update user progress
   const refreshUserProgress = async (currentUser: User | null = user) => {
     if (!currentUser) return;
     
     try {
-      // For demo purposes - in real implementation, this would query Supabase
       const certificates = await fetchUserCertificates(currentUser.id);
       const enrollments = await fetchUserEnrollments(currentUser.id);
       
-      // Calculate points (100 per certificate + progress on incomplete courses)
       let totalPoints = certificates.length * 100;
       let coursesCompleted = certificates.length;
       
       enrollments.forEach((enrollment: any) => {
-        // Add points for progress
         const progress = enrollment.progress || 0;
-        totalPoints += Math.floor(progress * 0.5); // 0.5 point per percent completed
+        totalPoints += Math.floor(progress * 0.5);
       });
       
-      // Update user progress
       const updatedUser = {
         ...currentUser,
         progress: {
@@ -160,26 +148,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Helper functions for demo data
   const fetchUserCertificates = async (userId: string) => {
-    // In a real implementation, this would query the certificates table
     return [];
   };
   
   const fetchUserEnrollments = async (userId: string) => {
-    // In a real implementation, this would query the enrollments table
     return [];
   };
 
-  // Login function
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
-      // For demo purposes, still support demo users
       if (isDemoUser(email)) {
         return handleDemoLogin(email, password);
       }
       
-      // Real Supabase authentication
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
@@ -194,7 +176,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return false;
       }
       
-      // Successfully authenticated with Supabase
       toast({
         title: "Login successful",
         description: "Welcome back!"
@@ -212,7 +193,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Helper for demo users during transition to Supabase
   const isDemoUser = (username: string): boolean => {
     const demoUsers = ['mentor', 'teacher', 'student', 'admin', 'HARSH'];
     return demoUsers.includes(username.toUpperCase());
@@ -221,7 +201,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const handleDemoLogin = (username: string, password: string): boolean => {
     if (password !== '12345678') return false;
     
-    // Case-insensitive username comparison
     const lowerUsername = username.toLowerCase();
     let role: User['role'] = 'student';
     
@@ -253,15 +232,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return true;
   };
 
-  // Logout function
   const logout = async () => {
     try {
-      // Sign out from Supabase
       const { error } = await supabase.auth.signOut();
       
       if (error) throw error;
       
-      // Clean up local state
       setUser(null);
       setIsAuthenticated(false);
       
@@ -279,7 +255,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Register function
   const register = async (
     username: string, 
     email: string, 
@@ -288,7 +263,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     avatar?: string
   ): Promise<boolean> => {
     try {
-      // First register with Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
@@ -296,15 +270,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (authError) throw authError;
       
-      // Next, create the user in our users table with additional info
       const validRole = ['student', 'mentor', 'admin', 'teacher', 'mentor_admin'].includes(role) 
         ? role as User['role'] 
         : 'student';
       
-      // In a real implementation, we would create the user in our database
-      // For demo, simulate successful registration
+      const newDbUser = await database.createUser({
+        name: username,
+        email: email,
+        role: validRole,
+        profilePicture: avatar || '/placeholder.svg',
+        bio: '',
+        expertise: [],
+        joinDate: new Date()
+      });
+      
+      if (!newDbUser) {
+        throw new Error("Failed to create user in database");
+      }
+      
       const newUser: User = {
-        id: authData.user?.id || `user_${Date.now()}`,
+        id: authData.user?.id || newDbUser.id,
         username,
         email,
         role: validRole,
@@ -324,29 +309,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(newUser);
       setIsAuthenticated(true);
       
-      toast({
-        title: "Registration successful",
-        description: "Your account has been created successfully."
-      });
-      
       return true;
     } catch (error: any) {
       console.error("Error during registration:", error);
-      toast({
-        variant: "destructive",
-        title: "Registration failed",
-        description: error.message || "An error occurred during registration. Please try again."
-      });
       return false;
     }
   };
 
-  // Update user profile
   const updateUserProfile = async (updates: Partial<User>) => {
     if (!user) return;
     
     try {
-      // In a real implementation, update the user in the database
       const updatedUser = { ...user, ...updates };
       
       setUser(updatedUser);
@@ -365,7 +338,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Update user preferences
   const updateUserPreferences = async (preferences: Partial<User['preferences']>) => {
     if (!user) return;
     
