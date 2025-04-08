@@ -1,12 +1,22 @@
-
 import { createClient } from '@supabase/supabase-js';
 
 // These values will be automatically injected after connecting your project
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+// For development without environment variables, use mock values that won't cause crashes
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://mock-supabase-url.com';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'mock-anon-key';
 
 // Create a single supabase client for interacting with your database
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+// Create a mock client if we're using mock credentials
+const usingMockCredentials = !import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+if (usingMockCredentials) {
+  console.warn(
+    "WARNING: Using mock Supabase credentials. The application is running without a real Supabase connection. " +
+    "To enable database functionality, please connect your project to Supabase using the Supabase integration button."
+  );
+}
 
 // Types for our database tables
 export type DbUser = {

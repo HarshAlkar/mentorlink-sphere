@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
+import { useEffect, useState } from "react";
 import Index from "./pages/Index";
 import Courses from "./pages/Courses";
 import CourseDetails from "./pages/CourseDetails";
@@ -35,6 +36,16 @@ const queryClient = new QueryClient();
 
 const App = () => {
   console.log("App component rendering");
+  const [isSupabaseAvailable, setIsSupabaseAvailable] = useState(true);
+  
+  useEffect(() => {
+    // Check if we're using mock Supabase credentials
+    const usingMockCredentials = 
+      !import.meta.env.VITE_SUPABASE_URL || 
+      !import.meta.env.VITE_SUPABASE_ANON_KEY;
+      
+    setIsSupabaseAvailable(!usingMockCredentials);
+  }, []);
   
   return (
     <QueryClientProvider client={queryClient}>
@@ -43,6 +54,11 @@ const App = () => {
           <Toaster />
           <Sonner />
           <BrowserRouter>
+            {!isSupabaseAvailable && (
+              <div className="fixed top-0 left-0 right-0 bg-yellow-500 text-black p-2 text-center z-50">
+                Running with mock database. Please connect to Supabase using the green button at the top right.
+              </div>
+            )}
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/courses" element={<Courses />} />
